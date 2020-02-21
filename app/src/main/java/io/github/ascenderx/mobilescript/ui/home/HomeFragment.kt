@@ -77,6 +77,7 @@ class HomeFragment : Fragment() {
                 // Immediately clear the input field.
                 editText.text = ""
                 output.delete(0, output.length)
+                arrayAdapter.notifyDataSetChanged()
             }
         })
 
