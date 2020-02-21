@@ -11,10 +11,7 @@ import android.widget.Button
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
-import com.eclipsesource.v8.JavaVoidCallback
-import com.eclipsesource.v8.V8
-import com.eclipsesource.v8.V8Array
-import com.eclipsesource.v8.V8Object
+import com.eclipsesource.v8.*
 import io.github.ascenderx.mobilescript.R
 
 class HomeFragment : Fragment() {
@@ -22,6 +19,7 @@ class HomeFragment : Fragment() {
     private lateinit var textView: TextView
     private lateinit var v8: V8
     private lateinit var evaluator: Evaluator
+    private var output: StringBuffer = StringBuffer()
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -49,20 +47,27 @@ class HomeFragment : Fragment() {
         val editText: TextView = root.findViewById(R.id.editText)
         val btRun: Button = root.findViewById(R.id.bt_run)
         btRun.isEnabled = false
-        btRun.setOnClickListener { view ->
-            try {
-                this.evaluator.evaluate(editText.text.toString())
-            } catch (ex: Exception) {
-                write(ex.message.toString())
-            }
-            // Immediately clear the input field.
-            editText.text = ""
-        }
+        val evaluator = this.evaluator
+        btRun.setOnClickListener(object : View.OnClickListener {
+            override fun onClick(view: View) {
+                val command = editText.text.toString()
+                output.append("> $command\n")
 
-        editText.addTextChangedListener(object: TextWatcher {
+                try {
+                    output.append(evaluator.evaluate(command) ?: "undefined")
+                    output.append("\n")
+                } catch (v8ex: V8RuntimeException) {
+                    output.append("[JavaScript] ${v8ex.message.toString()}\n")
+                }
+                // Immediately clear the input field.
+                editText.text = ""
+                textView.text = output.toString()
+            }
+        })
+        editText.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(text: Editable?) {
                 if (text != null) {
-                    btRun.isEnabled = !text.isEmpty()
+                    btRun.isEnabled = text.isNotEmpty()
                 }
             }
             override fun beforeTextChanged(text: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -72,23 +77,28 @@ class HomeFragment : Fragment() {
         return root
     }
 
-    fun write(text: String) {
-        textView.text = text
+    fun printLine(text: String) {
+        output.append(text)
     }
 
     fun clear() {
-
+        output.delete(0, output.length)
     }
 
     interface Evaluator {
         fun getRuntime(): V8
-        fun evaluate(text: String)
+        fun evaluate(text: String): Any?
     }
 
     class PrintLineCallback(private val fragment: HomeFragment) : JavaVoidCallback {
         override fun invoke(receiver: V8Object, parameters: V8Array) {
-            val output: String = parameters[0] as String
-            fragment.write(output)
+            if (parameters.length() == 0) {
+                fragment.printLine("\n")
+                return
+            }
+
+            val output: String = parameters[0].toString()
+            fragment.printLine(output)
         }
     }
 

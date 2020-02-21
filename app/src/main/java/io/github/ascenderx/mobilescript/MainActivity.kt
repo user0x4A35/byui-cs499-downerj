@@ -33,8 +33,8 @@ class MainActivity : AppCompatActivity(), HomeFragment.Evaluator {
         v8 = V8.createV8Runtime()
     }
 
-    override fun evaluate(text: String) {
-        v8.executeScript(text)
+    override fun evaluate(text: String): Any? {
+        return v8.executeScript(text)
     }
 
     override fun getRuntime() : V8 {
