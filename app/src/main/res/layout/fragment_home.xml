@@ -4,8 +4,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <TextView
-        android:id="@+id/text_home"
+    <ListView
+        android:id="@+id/consoleOutput"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:textSize="14sp"
@@ -22,13 +22,14 @@
         android:inputType="textMultiLine"
         android:importantForAutofill="no"
         android:hint="@string/input_hint"
-        app:layout_constraintEnd_toStartOf="@+id/bt_run"
+        android:fontFamily="monospace"
+        app:layout_constraintEnd_toStartOf="@+id/btRun"
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <Button
-        android:id="@+id/bt_run"
+        android:id="@+id/btRun"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/run_button"
