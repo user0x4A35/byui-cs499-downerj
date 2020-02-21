@@ -1,20 +1,23 @@
 package io.github.ascenderx.mobilescript
 
 import android.os.Bundle
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
+import com.eclipsesource.v8.V8
+import com.google.android.material.bottomnavigation.BottomNavigationView
+import io.github.ascenderx.mobilescript.ui.home.HomeFragment
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), HomeFragment.Evaluator {
+    private lateinit var v8: V8
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Provided.
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         val navView: BottomNavigationView = findViewById(R.id.nav_view)
-
         val navController = findNavController(R.id.nav_host_fragment)
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.
@@ -25,5 +28,18 @@ class MainActivity : AppCompatActivity() {
         )
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
+
+        // Initialize the JavaScript runtime.
+        v8 = V8.createV8Runtime()
+    }
+
+    override fun evaluate(text: String): Any? {
+        return v8.executeScript(text)
+    }
+
+    override fun getRuntime() : V8 {
+        return v8
     }
 }
+
+

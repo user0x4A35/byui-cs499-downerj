@@ -3,4 +3,7 @@
     <string name="title_home">Home</string>
     <string name="title_dashboard">Dashboard</string>
     <string name="title_notifications">Notifications</string>
+    <string name="console_ready">Ready.</string>
+    <string name="run_button">Run</string>
+    <string name="input_hint">Enter command…</string>
 </resources>
