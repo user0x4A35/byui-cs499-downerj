@@ -7,22 +7,24 @@ import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.ListView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+
 import com.eclipsesource.v8.*
+
 import io.github.ascenderx.mobilescript.R
+import io.github.ascenderx.mobilescript.models.ConsoleOutputRow
+import io.github.ascenderx.mobilescript.ui.ConsoleListAdapter
 
 class HomeFragment : Fragment() {
     private lateinit var homeViewModel: HomeViewModel
-//    private lateinit var textView: TextView
     private lateinit var v8: V8
     private lateinit var evaluator: Evaluator
     private var output: StringBuffer = StringBuffer()
-    private var outputList: MutableList<String> = mutableListOf()
+    private lateinit var consoleAdapter: ConsoleListAdapter
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -52,12 +54,8 @@ class HomeFragment : Fragment() {
         val btRun: Button = root.findViewById(R.id.btRun)
 
         // Register the output list.
-        val arrayAdapter = ArrayAdapter<String>(
-            context as Context,
-            R.layout.output_row,
-            outputList
-        )
-        consoleOutputView.adapter = arrayAdapter
+        consoleAdapter = ConsoleListAdapter(context as Context)
+        consoleOutputView.adapter = consoleAdapter
 
         // Register the run button.
         btRun.isEnabled = false
@@ -69,15 +67,20 @@ class HomeFragment : Fragment() {
 
                 try {
                     result = "${evaluator.evaluate(command) ?: "undefined"}"
-                    outputList.add("-> $command\n$output<= $result\n")
+                    consoleAdapter.addItem(
+                        ConsoleOutputRow.ConsoleOutputType.VALID,
+                        "-> $command\n$output<= $result\n"
+                    )
                 } catch (v8ex: V8RuntimeException) {
-                    outputList.add("-> $command\n[V8] ${v8ex.message.toString()}\n")
+                    consoleAdapter.addItem(
+                        ConsoleOutputRow.ConsoleOutputType.INVALID,
+                        "-> $command\n[V8] ${v8ex.message.toString()}\n"
+                    )
                 }
 
                 // Immediately clear the input field.
                 editText.text = ""
-                output.delete(0, output.length)
-                arrayAdapter.notifyDataSetChanged()
+                clearOutputBuffer()
             }
         })
 
@@ -99,9 +102,13 @@ class HomeFragment : Fragment() {
         output.append(text)
     }
 
-    fun clear() {
+    private fun clearOutputBuffer() {
         output.delete(0, output.length)
-        outputList.clear()
+    }
+
+    fun clearOutputList() {
+        clearOutputBuffer()
+        consoleAdapter.clear()
     }
 
     interface Evaluator {
@@ -135,7 +142,7 @@ class HomeFragment : Fragment() {
 
     class ClearCallback(private val fragment: HomeFragment) : JavaVoidCallback {
         override fun invoke(receiver: V8Object?, parameters: V8Array?) {
-            fragment.clear()
+            fragment.clearOutputList()
         }
     }
 }
