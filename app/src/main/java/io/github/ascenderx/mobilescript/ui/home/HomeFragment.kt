@@ -14,14 +14,14 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 
 import com.eclipsesource.v8.*
+import io.github.ascenderx.mobilescript.MainActivity
 
 import io.github.ascenderx.mobilescript.R
 import io.github.ascenderx.mobilescript.models.ConsoleOutputRow
 import io.github.ascenderx.mobilescript.ui.ConsoleListAdapter
 
-class HomeFragment : Fragment() {
+class HomeFragment : Fragment(), OnResultListener {
     private lateinit var homeViewModel: HomeViewModel
-    private lateinit var v8: V8
     private lateinit var evaluator: Evaluator
     private var output: StringBuffer = StringBuffer()
     private lateinit var consoleAdapter: ConsoleListAdapter
@@ -31,10 +31,8 @@ class HomeFragment : Fragment() {
 
         if (context is Evaluator) {
             evaluator = context
-            v8 = evaluator.getRuntime()
-            v8.registerJavaMethod(PrintCallback(this), "print")
-            v8.registerJavaMethod(PrintLineCallback(this), "println")
-            v8.registerJavaMethod(ClearCallback(this), "clear")
+            evaluator.callback = this
+            evaluator.bootRuntime(this)
         }
     }
 
@@ -59,28 +57,13 @@ class HomeFragment : Fragment() {
 
         // Register the run button.
         btRun.isEnabled = false
-        val evaluator = this.evaluator
         btRun.setOnClickListener(object : View.OnClickListener {
             override fun onClick(view: View) {
                 val command = "${editText.text}"
-                val result: String
-
-                try {
-                    result = "${evaluator.evaluate(command) ?: "undefined"}"
-                    consoleAdapter.addItem(
-                        ConsoleOutputRow.ConsoleOutputType.VALID,
-                        "-> $command\n$output<= $result\n"
-                    )
-                } catch (v8ex: V8RuntimeException) {
-                    consoleAdapter.addItem(
-                        ConsoleOutputRow.ConsoleOutputType.INVALID,
-                        "-> $command\n[JavaScript] ${v8ex.message.toString()}\n"
-                    )
-                }
+                evaluator.evaluate(command)
 
                 // Immediately clear the input field.
                 editText.text = ""
-                clearOutputBuffer()
             }
         })
 
@@ -98,6 +81,26 @@ class HomeFragment : Fragment() {
         return root
     }
 
+    override fun onResult(command: String?, result: Any?, error: String?) {
+        if (command == null) {
+            return
+        }
+
+        if (error == null) {
+            val fullResult = "${result ?: "undefined"}"
+            consoleAdapter.addItem(
+                ConsoleOutputRow.ConsoleOutputType.VALID,
+                "-> $command\n$output<= $fullResult\n"
+            )
+        } else {
+            consoleAdapter.addItem(
+                ConsoleOutputRow.ConsoleOutputType.INVALID,
+                "-> $command\n[JavaScript] ${error}\n"
+            )
+        }
+        clearOutputBuffer()
+    }
+
     fun print(text: String) {
         output.append(text)
     }
@@ -112,8 +115,9 @@ class HomeFragment : Fragment() {
     }
 
     interface Evaluator {
-        fun getRuntime(): V8
-        fun evaluate(text: String): Any?
+        var callback: OnResultListener?
+        fun bootRuntime(fragment: HomeFragment)
+        fun evaluate(command: String)
     }
 
     class PrintCallback(private val fragment: HomeFragment) : JavaVoidCallback {
@@ -145,4 +149,8 @@ class HomeFragment : Fragment() {
             fragment.clearOutputList()
         }
     }
+}
+
+interface OnResultListener {
+    fun onResult(command: String?, result: Any?, error: String?)
 }
