@@ -74,7 +74,7 @@ class HomeFragment : Fragment() {
                 } catch (v8ex: V8RuntimeException) {
                     consoleAdapter.addItem(
                         ConsoleOutputRow.ConsoleOutputType.INVALID,
-                        "-> $command\n[V8] ${v8ex.message.toString()}\n"
+                        "-> $command\n[JavaScript] ${v8ex.message.toString()}\n"
                     )
                 }
 
