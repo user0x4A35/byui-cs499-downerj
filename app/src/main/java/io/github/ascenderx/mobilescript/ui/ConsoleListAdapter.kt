@@ -9,7 +9,7 @@ import android.widget.BaseAdapter
 import android.widget.TextView
 
 import io.github.ascenderx.mobilescript.R
-import io.github.ascenderx.mobilescript.models.ConsoleOutputRow
+import io.github.ascenderx.mobilescript.controllers.ConsoleOutputRow
 
 // See: http://android.amberfog.com/?p=296.
 
@@ -19,7 +19,12 @@ class ConsoleListAdapter(context: Context) : BaseAdapter() {
     private val data: MutableList<ConsoleOutputRow> = mutableListOf()
 
     fun addItem(type: ConsoleOutputRow.ConsoleOutputType, text: String) {
-        data.add(ConsoleOutputRow(type, text))
+        data.add(
+            ConsoleOutputRow(
+                type,
+                text
+            )
+        )
         notifyDataSetChanged()
     }
 

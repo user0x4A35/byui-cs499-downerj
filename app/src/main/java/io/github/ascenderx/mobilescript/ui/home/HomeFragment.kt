@@ -14,10 +14,9 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 
 import com.eclipsesource.v8.*
-import io.github.ascenderx.mobilescript.MainActivity
 
 import io.github.ascenderx.mobilescript.R
-import io.github.ascenderx.mobilescript.models.ConsoleOutputRow
+import io.github.ascenderx.mobilescript.controllers.ConsoleOutputRow
 import io.github.ascenderx.mobilescript.ui.ConsoleListAdapter
 
 class HomeFragment : Fragment(), OnResultListener {
