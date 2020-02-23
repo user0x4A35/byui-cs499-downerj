@@ -49,7 +49,7 @@ class HomeFragment : Fragment() {
         val root = inflater.inflate(R.layout.fragment_home, container, false)
 
         // Get components by ID.
-        val consoleOutputView: ListView = root.findViewById(R.id.consoleOutput)
+        val consoleOutputView: ListView = root.findViewById(R.id.consoleOutput) as ListView
         val editText: TextView = root.findViewById(R.id.editText)
         val btRun: Button = root.findViewById(R.id.btRun)
 
