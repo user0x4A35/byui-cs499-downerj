@@ -1,4 +1,4 @@
-package io.github.ascenderx.mobilescript.ui.home
+package io.github.ascenderx.mobilescript.ui.console
 
 import android.content.Context
 import android.os.Bundle
@@ -20,10 +20,9 @@ import io.github.ascenderx.mobilescript.R
 import io.github.ascenderx.mobilescript.models.ConsoleOutputRow
 import io.github.ascenderx.mobilescript.models.ScriptEngine
 import io.github.ascenderx.mobilescript.models.ScriptMessageStatus
-import io.github.ascenderx.mobilescript.ui.ConsoleListAdapter
 
-class HomeFragment : Fragment() {
-    private lateinit var homeViewModel: HomeViewModel
+class ConsoleFragment : Fragment() {
+    private lateinit var consoleViewModel: ConsoleViewModel
     private lateinit var consoleAdapter: ConsoleListAdapter
     private lateinit var handler: Handler
     private lateinit var scriptEngine: ScriptEngine
@@ -51,9 +50,9 @@ class HomeFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         // Provided.
-        homeViewModel =
-            ViewModelProvider(this).get(HomeViewModel::class.java)
-        val root = inflater.inflate(R.layout.fragment_home, container, false)
+        consoleViewModel =
+            ViewModelProvider(this).get(ConsoleViewModel::class.java)
+        val root = inflater.inflate(R.layout.fragment_console, container, false)
 
         // Get components by ID.
         val consoleOutputView: ListView = root.findViewById(R.id.consoleOutput) as ListView
@@ -61,7 +60,10 @@ class HomeFragment : Fragment() {
         val btRun: Button = root.findViewById(R.id.btRun)
 
         // Register the output list.
-        consoleAdapter = ConsoleListAdapter(context as Context)
+        consoleAdapter =
+            ConsoleListAdapter(
+                context as Context
+            )
         consoleOutputView.adapter = consoleAdapter
 
         // Register the run button.

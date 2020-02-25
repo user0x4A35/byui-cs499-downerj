@@ -1,4 +1,4 @@
-package io.github.ascenderx.mobilescript.ui
+package io.github.ascenderx.mobilescript.ui.console
 
 import android.content.Context
 import android.graphics.Color
