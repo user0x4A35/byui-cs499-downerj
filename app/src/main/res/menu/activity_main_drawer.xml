@@ -10,15 +10,15 @@
             android:title="@string/menu_console" />
         <item
             android:id="@+id/nav_canvas"
-            android:icon="@drawable/ic_menu_gallery"
+            android:icon="@drawable/ic_image"
             android:title="@string/menu_canvas" />
         <item
             android:id="@+id/nav_open"
-            android:icon="@drawable/ic_menu_archive"
+            android:icon="@drawable/ic_open"
             android:title="@string/menu_open" />
         <item
             android:id="@+id/nav_settings"
-            android:icon="@drawable/ic_menu_preferences"
+            android:icon="@drawable/ic_settings"
             android:title="@string/menu_settings" />
     </group>
 </menu>
