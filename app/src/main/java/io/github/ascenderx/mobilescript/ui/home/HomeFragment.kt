@@ -69,12 +69,12 @@ class HomeFragment : Fragment() {
                     result = "${evaluator.evaluate(command) ?: "undefined"}"
                     consoleAdapter.addItem(
                         ConsoleOutputRow.ConsoleOutputType.VALID,
-                        "-> $command\n$output<= $result\n"
+                        "-> $command\n$output<= $result"
                     )
                 } catch (v8ex: V8RuntimeException) {
                     consoleAdapter.addItem(
                         ConsoleOutputRow.ConsoleOutputType.INVALID,
-                        "-> $command\n[JavaScript] ${v8ex.message.toString()}\n"
+                        "-> $command\n[JavaScript] ${v8ex.message.toString()}"
                     )
                 }
 
@@ -119,10 +119,8 @@ class HomeFragment : Fragment() {
     class PrintCallback(private val fragment: HomeFragment) : JavaVoidCallback {
         override fun invoke(receiver: V8Object?, parameters: V8Array?) {
             if ((parameters == null) || (parameters.length() == 0)) {
-                fragment.print("\n")
                 return
             }
-
             val output = "${parameters[0]}"
             fragment.print(output)
         }
