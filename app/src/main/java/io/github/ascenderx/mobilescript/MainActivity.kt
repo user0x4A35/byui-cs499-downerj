@@ -10,9 +10,7 @@ import com.eclipsesource.v8.V8
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import io.github.ascenderx.mobilescript.ui.home.HomeFragment
 
-class MainActivity : AppCompatActivity(), HomeFragment.Evaluator {
-    private lateinit var v8: V8
-
+class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // Provided.
         super.onCreate(savedInstanceState)
@@ -30,15 +28,6 @@ class MainActivity : AppCompatActivity(), HomeFragment.Evaluator {
         navView.setupWithNavController(navController)
 
         // Initialize the JavaScript runtime.
-        v8 = V8.createV8Runtime()
-    }
-
-    override fun evaluate(text: String): Any? {
-        return v8.executeScript(text)
-    }
-
-    override fun getRuntime() : V8 {
-        return v8
     }
 }
 
