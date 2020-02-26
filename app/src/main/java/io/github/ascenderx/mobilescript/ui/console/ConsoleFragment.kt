@@ -2,10 +2,10 @@ package io.github.ascenderx.mobilescript.ui.console
 
 import android.content.Context
 import android.os.Bundle
-import android.os.Handler
 import android.os.Message
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -32,11 +32,14 @@ class ConsoleFragment : Fragment() {
         if (context is ScriptEventEmitter) {
             context.attachScriptEventListener(object : ScriptEventListener {
                 override fun onMessage(msg: Message) {
+                    val data: String = msg.obj.toString()
                     when (msg.what) {
-                        ScriptMessageStatus.PRINT.value -> printOutput(msg.obj as String)
-                        ScriptMessageStatus.ERROR.value -> printError(msg.obj as String)
+                        ScriptMessageStatus.PRINT.value -> printOutput(data)
+                        ScriptMessageStatus.PRINT_LINE.value -> printOutputAndEndLine(data)
+                        ScriptMessageStatus.ERROR.value -> printError(data)
                         ScriptMessageStatus.CLEAR.value -> clearOutput()
-                        ScriptMessageStatus.RESULT.value -> printResult(msg.obj as String)
+                        ScriptMessageStatus.RESULT.value -> printResult(data)
+
                     }
                 }
             })
@@ -94,31 +97,23 @@ class ConsoleFragment : Fragment() {
     }
 
     fun printCommand(command: String) {
-        consoleAdapter.addItem(
-            ConsoleOutputType.COMMAND,
-            "-> $command"
-        )
+        consoleAdapter.addCommandLine("-> $command")
     }
 
     fun printOutput(text: String) {
-        consoleAdapter.addItem(
-            ConsoleOutputType.VALID,
-            text
-        )
+        consoleAdapter.addOutput(text)
     }
 
-    fun printError(message: String) {
-        consoleAdapter.addItem(
-            ConsoleOutputType.INVALID,
-            message
-        )
+    fun printOutputAndEndLine(text: String) {
+        consoleAdapter.addOutputAndEndLine(text)
+    }
+
+    fun printError(error: String) {
+        consoleAdapter.addErrorLine(error)
     }
 
     fun printResult(result: String) {
-        consoleAdapter.addItem(
-            ConsoleOutputType.RESULT,
-            "<= $result"
-        )
+        consoleAdapter.addResultLine("<= $result")
     }
 
     fun clearOutput() {

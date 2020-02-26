@@ -1,12 +1,35 @@
 package io.github.ascenderx.mobilescript.ui.console
 
-import android.graphics.Color
+class ConsoleOutputRow(val type: ConsoleOutputType) {
+    private var buffer: StringBuffer? = StringBuffer()
+    private var text: String? = null
 
-class ConsoleOutputRow(val type: ConsoleOutputType, val text: String)
+    fun append(text: String) {
+        buffer?.append(text)
+    }
 
-enum class ConsoleOutputType(val color: Int) {
-    VALID(Color.BLUE),
-    INVALID(Color.RED),
-    COMMAND(Color.GRAY),
-    RESULT(Color.BLACK)
+    fun appendAndComplete(text: String) {
+        append(text)
+        complete()
+    }
+
+    fun getText(): String {
+        return when {
+            buffer != null -> buffer.toString()
+            text != null -> text.toString()
+            else -> ""
+        }
+    }
+
+    fun complete() {
+        if (buffer == null) {
+            return
+        }
+        text = buffer.toString()
+        buffer = null
+    }
+
+    fun isComplete(): Boolean {
+        return buffer == null
+    }
 }
