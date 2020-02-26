@@ -1,4 +1,4 @@
-package io.github.ascenderx.mobilescript.models
+package io.github.ascenderx.mobilescript.ui.console
 
 import android.graphics.Color
 

@@ -1,8 +1,6 @@
 package io.github.ascenderx.mobilescript.ui.console
 
-import android.app.Activity
 import android.content.Context
-import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -10,8 +8,6 @@ import android.widget.BaseAdapter
 import android.widget.TextView
 
 import io.github.ascenderx.mobilescript.R
-import io.github.ascenderx.mobilescript.models.ConsoleOutputRow
-import io.github.ascenderx.mobilescript.models.ConsoleOutputType
 
 // See: http://android.amberfog.com/?p=296.
 
@@ -21,7 +17,12 @@ class ConsoleListAdapter(context: Context) : BaseAdapter() {
     private val data: MutableList<ConsoleOutputRow> = mutableListOf()
 
     fun addItem(type: ConsoleOutputType, text: String) {
-        data.add(ConsoleOutputRow(type, text))
+        data.add(
+            ConsoleOutputRow(
+                type,
+                text
+            )
+        )
         notifyDataSetChanged()
     }
 
