@@ -1,8 +1,7 @@
-package io.github.ascenderx.mobilescript.models
+package io.github.ascenderx.mobilescript.models.scripting
 
 import android.os.Handler
 import android.os.Message
-import android.util.Log
 import com.eclipsesource.v8.*
 import java.util.concurrent.ConcurrentLinkedQueue
 
@@ -14,13 +13,19 @@ class ScriptEngine private constructor(handler: Handler) {
             return if (instance != null) {
                 instance as ScriptEngine
             } else {
-                instance = ScriptEngine(handler)
+                instance =
+                    ScriptEngine(
+                        handler
+                    )
                 instance as ScriptEngine
             }
         }
     }
 
-    private val runnable: ScriptRunnable = ScriptRunnable(handler)
+    private val runnable: ScriptRunnable =
+        ScriptRunnable(
+            handler
+        )
     private val thread: Thread = Thread(runnable)
 
     init {
@@ -36,9 +41,18 @@ class ScriptEngine private constructor(handler: Handler) {
 
         override fun run() {
             val runtime: V8 = V8.createV8Runtime()
-            runtime.registerJavaMethod(PrintCallback(handler), "print")
-            runtime.registerJavaMethod(PrintLineCallback(handler), "println")
-            runtime.registerJavaMethod(ClearCallback(handler), "clear")
+            runtime.registerJavaMethod(
+                PrintCallback(
+                    handler
+                ), "print")
+            runtime.registerJavaMethod(
+                PrintLineCallback(
+                    handler
+                ), "println")
+            runtime.registerJavaMethod(
+                ClearCallback(
+                    handler
+                ), "clear")
 
             while (true) {
                 val command: String? = commands.poll()
@@ -100,11 +114,4 @@ class ScriptEngine private constructor(handler: Handler) {
             }
         }
     }
-}
-
-enum class ScriptMessageStatus(val value: Int) {
-    ERROR(-1),
-    RESULT(0),
-    PRINT(1),
-    CLEAR(2)
 }

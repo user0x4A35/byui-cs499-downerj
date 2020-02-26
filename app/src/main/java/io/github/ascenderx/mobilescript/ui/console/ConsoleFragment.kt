@@ -2,11 +2,10 @@ package io.github.ascenderx.mobilescript.ui.console
 
 import android.content.Context
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.os.Message
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -17,32 +16,35 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 
 import io.github.ascenderx.mobilescript.R
-import io.github.ascenderx.mobilescript.models.ConsoleOutputRow
-import io.github.ascenderx.mobilescript.models.ConsoleOutputType
-import io.github.ascenderx.mobilescript.models.ScriptEngine
-import io.github.ascenderx.mobilescript.models.ScriptMessageStatus
+import io.github.ascenderx.mobilescript.models.scripting.ScriptEngine
+import io.github.ascenderx.mobilescript.models.scripting.ScriptEventEmitter
+import io.github.ascenderx.mobilescript.models.scripting.ScriptEventListener
+import io.github.ascenderx.mobilescript.models.scripting.ScriptMessageStatus
 
 class ConsoleFragment : Fragment() {
     private lateinit var consoleViewModel: ConsoleViewModel
     private lateinit var consoleAdapter: ConsoleListAdapter
-    private lateinit var handler: Handler
-    private lateinit var scriptEngine: ScriptEngine
+    private var scriptEngine: ScriptEngine? = null
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
 
-        handler = object : Handler(Looper.getMainLooper()) {
-            override fun handleMessage(msg: Message) {
-                when (msg.what) {
-                    ScriptMessageStatus.PRINT.value -> printOutput(msg.obj as String)
-                    ScriptMessageStatus.ERROR.value -> printError(msg.obj as String)
-                    ScriptMessageStatus.CLEAR.value -> clearOutput()
-                    ScriptMessageStatus.RESULT.value -> printResult(msg.obj as String)
-                }
-            }
-        }
+        if (context is ScriptEventEmitter) {
+            context.attachScriptEventListener(object : ScriptEventListener {
+                override fun onMessage(msg: Message) {
+                    val data: String = msg.obj.toString()
+                    when (msg.what) {
+                        ScriptMessageStatus.PRINT.value -> printOutput(data)
+                        ScriptMessageStatus.PRINT_LINE.value -> printOutputAndEndLine(data)
+                        ScriptMessageStatus.ERROR.value -> printError(data)
+                        ScriptMessageStatus.CLEAR.value -> clearOutput()
+                        ScriptMessageStatus.RESULT.value -> printResult(data)
 
-        scriptEngine = ScriptEngine.getInstance(handler)
+                    }
+                }
+            })
+            scriptEngine = context.engine
+        }
     }
 
     override fun onCreateView(
@@ -73,7 +75,7 @@ class ConsoleFragment : Fragment() {
             override fun onClick(view: View) {
                 val command = "${editText.text}"
                 printCommand(command)
-                scriptEngine.evaluate(command)
+                scriptEngine?.evaluate(command)
 
                 // Immediately clear the input field.
                 editText.text = ""
@@ -95,31 +97,23 @@ class ConsoleFragment : Fragment() {
     }
 
     fun printCommand(command: String) {
-        consoleAdapter.addItem(
-            ConsoleOutputType.COMMAND,
-            "-> $command"
-        )
+        consoleAdapter.addCommandLine("-> $command")
     }
 
     fun printOutput(text: String) {
-        consoleAdapter.addItem(
-            ConsoleOutputType.VALID,
-            text
-        )
+        consoleAdapter.addOutput(text)
     }
 
-    fun printError(message: String) {
-        consoleAdapter.addItem(
-            ConsoleOutputType.INVALID,
-            message
-        )
+    fun printOutputAndEndLine(text: String) {
+        consoleAdapter.addOutputAndEndLine(text)
+    }
+
+    fun printError(error: String) {
+        consoleAdapter.addErrorLine(error)
     }
 
     fun printResult(result: String) {
-        consoleAdapter.addItem(
-            ConsoleOutputType.RESULT,
-            "<= $result"
-        )
+        consoleAdapter.addResultLine("<= $result")
     }
 
     fun clearOutput() {
