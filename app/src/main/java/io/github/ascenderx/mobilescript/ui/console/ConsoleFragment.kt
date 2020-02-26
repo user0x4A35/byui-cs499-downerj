@@ -18,6 +18,7 @@ import androidx.lifecycle.ViewModelProvider
 
 import io.github.ascenderx.mobilescript.R
 import io.github.ascenderx.mobilescript.models.ConsoleOutputRow
+import io.github.ascenderx.mobilescript.models.ConsoleOutputType
 import io.github.ascenderx.mobilescript.models.ScriptEngine
 import io.github.ascenderx.mobilescript.models.ScriptMessageStatus
 
@@ -95,28 +96,28 @@ class ConsoleFragment : Fragment() {
 
     fun printCommand(command: String) {
         consoleAdapter.addItem(
-            ConsoleOutputRow.ConsoleOutputType.VALID,
+            ConsoleOutputType.COMMAND,
             "-> $command"
         )
     }
 
     fun printOutput(text: String) {
         consoleAdapter.addItem(
-            ConsoleOutputRow.ConsoleOutputType.VALID,
+            ConsoleOutputType.VALID,
             text
         )
     }
 
     fun printError(message: String) {
         consoleAdapter.addItem(
-            ConsoleOutputRow.ConsoleOutputType.INVALID,
+            ConsoleOutputType.INVALID,
             message
         )
     }
 
     fun printResult(result: String) {
         consoleAdapter.addItem(
-            ConsoleOutputRow.ConsoleOutputType.VALID,
+            ConsoleOutputType.RESULT,
             "<= $result"
         )
     }

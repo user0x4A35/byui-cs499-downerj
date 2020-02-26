@@ -1,5 +1,6 @@
 package io.github.ascenderx.mobilescript.ui.console
 
+import android.app.Activity
 import android.content.Context
 import android.graphics.Color
 import android.view.LayoutInflater
@@ -10,6 +11,7 @@ import android.widget.TextView
 
 import io.github.ascenderx.mobilescript.R
 import io.github.ascenderx.mobilescript.models.ConsoleOutputRow
+import io.github.ascenderx.mobilescript.models.ConsoleOutputType
 
 // See: http://android.amberfog.com/?p=296.
 
@@ -18,7 +20,7 @@ class ConsoleListAdapter(context: Context) : BaseAdapter() {
         context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
     private val data: MutableList<ConsoleOutputRow> = mutableListOf()
 
-    fun addItem(type: ConsoleOutputRow.ConsoleOutputType, text: String) {
+    fun addItem(type: ConsoleOutputType, text: String) {
         data.add(ConsoleOutputRow(type, text))
         notifyDataSetChanged()
     }
@@ -48,12 +50,10 @@ class ConsoleListAdapter(context: Context) : BaseAdapter() {
         }
 
         val item: ConsoleOutputRow? = getItem(position)
-        when (item?.type) {
-            ConsoleOutputRow.ConsoleOutputType.INVALID -> view.setTextColor(Color.RED)
-            ConsoleOutputRow.ConsoleOutputType.VALID -> view.setTextColor(Color.BLUE)
-        }
+        val color: Int = item?.type?.color as Int
 
-        view.text = item?.text
+        view.setTextColor(color)
+        view.text = item.text
 
         return view
     }
