@@ -36,16 +36,16 @@ class ConsoleFragment : Fragment() {
         if (context is ScriptEventEmitter) {
             context.attachScriptEventListener(object : ScriptEventListener {
                 override fun onMessage(msg: Message) {
-                    val data: String = msg.obj.toString()
+                    val data: String = (msg.obj ?: "undefined").toString()
                     when (msg.what) {
                         ScriptMessageStatus.PRINT.value -> printOutput(data)
                         ScriptMessageStatus.PRINT_LINE.value -> printOutputAndEndLine(data)
+                        ScriptMessageStatus.CLEAR.value -> clearOutput()
                         ScriptMessageStatus.ERROR.value -> {
                             printError(data)
                             enableInputField()
                             btHistory.isEnabled = true
                         }
-                        ScriptMessageStatus.CLEAR.value -> clearOutput()
                         ScriptMessageStatus.RESULT.value -> {
                             printResult(data)
                             enableInputField()
