@@ -5,7 +5,6 @@ import android.os.Bundle
 import android.os.Message
 import android.text.Editable
 import android.text.TextWatcher
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -25,6 +24,11 @@ class ConsoleFragment : Fragment() {
     private lateinit var consoleViewModel: ConsoleViewModel
     private lateinit var consoleAdapter: ConsoleListAdapter
     private var scriptEngine: ScriptEngine? = null
+    private var currentHistoryIndex: Int = -1
+    private lateinit var consoleOutputView: ListView
+    private lateinit var txtInput: TextView
+    private lateinit var btHistory: Button
+    private lateinit var btRun: Button
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -36,9 +40,17 @@ class ConsoleFragment : Fragment() {
                     when (msg.what) {
                         ScriptMessageStatus.PRINT.value -> printOutput(data)
                         ScriptMessageStatus.PRINT_LINE.value -> printOutputAndEndLine(data)
-                        ScriptMessageStatus.ERROR.value -> printError(data)
+                        ScriptMessageStatus.ERROR.value -> {
+                            printError(data)
+                            enableInputField()
+                            btHistory.isEnabled = true
+                        }
                         ScriptMessageStatus.CLEAR.value -> clearOutput()
-                        ScriptMessageStatus.RESULT.value -> printResult(data)
+                        ScriptMessageStatus.RESULT.value -> {
+                            printResult(data)
+                            enableInputField()
+                            btHistory.isEnabled = true
+                        }
 
                     }
                 }
@@ -58,32 +70,54 @@ class ConsoleFragment : Fragment() {
         val root = inflater.inflate(R.layout.fragment_console, container, false)
 
         // Get components by ID.
-        val consoleOutputView: ListView = root.findViewById(R.id.consoleOutput) as ListView
-        val editText: TextView = root.findViewById(R.id.editText)
-        val btRun: Button = root.findViewById(R.id.btRun)
+        consoleOutputView = root.findViewById(R.id.consoleOutput) as ListView
+        txtInput = root.findViewById(R.id.txtInput)
+        btHistory = root.findViewById(R.id.btHistory)
+        btRun = root.findViewById(R.id.btRun)
 
         // Register the output list.
-        consoleAdapter =
-            ConsoleListAdapter(
-                context as Context
-            )
+        consoleAdapter = ConsoleListAdapter(context as Context)
         consoleOutputView.adapter = consoleAdapter
+
+        // Register the history button.
+        btHistory.isEnabled = false
+        btHistory.setOnClickListener(object : View.OnClickListener {
+            override fun onClick(view: View) {
+                if (scriptEngine == null) {
+                    return
+                }
+                val engine: ScriptEngine = scriptEngine as ScriptEngine
+                val history: List<String> = engine.commandHistory
+                val command: String = history[currentHistoryIndex--]
+                txtInput.text = command
+                // Disable the button once we've reached the bottom of the history stack.
+                btHistory.isEnabled = currentHistoryIndex >= 0
+            }
+        })
 
         // Register the run button.
         btRun.isEnabled = false
         btRun.setOnClickListener(object : View.OnClickListener {
             override fun onClick(view: View) {
-                val command = "${editText.text}"
+                if (scriptEngine == null) {
+                    return
+                }
+                val engine: ScriptEngine = scriptEngine as ScriptEngine
+                val command = "${txtInput.text}"
                 printCommand(command)
-                scriptEngine?.evaluate(command)
+                val historyIndex: Int = engine.evaluate(command)
+                currentHistoryIndex = historyIndex
 
-                // Immediately clear the input field.
-                editText.text = ""
+                // Immediately clear and disable the input field.
+                clearInputField()
+                disableInputField()
+                // Disable the history button (until execution completes).
+                btHistory.isEnabled = false
             }
         })
 
         // Register the input field.
-        editText.addTextChangedListener(object : TextWatcher {
+        txtInput.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(text: Editable?) {
                 if (text != null) {
                     btRun.isEnabled = text.isNotEmpty()
@@ -96,27 +130,41 @@ class ConsoleFragment : Fragment() {
         return root
     }
 
-    fun printCommand(command: String) {
+    private fun enableInputField() {
+        txtInput.isEnabled = true
+        txtInput.hint = getText(R.string.input_hint)
+    }
+
+    private fun disableInputField() {
+        txtInput.isEnabled = false
+        txtInput.hint = getText(R.string.running_hint)
+    }
+
+    private fun clearInputField() {
+        txtInput.text = ""
+    }
+
+    private fun printCommand(command: String) {
         consoleAdapter.addCommandLine("-> $command")
     }
 
-    fun printOutput(text: String) {
+    private fun printOutput(text: String) {
         consoleAdapter.addOutput(text)
     }
 
-    fun printOutputAndEndLine(text: String) {
+    private fun printOutputAndEndLine(text: String) {
         consoleAdapter.addOutputAndEndLine(text)
     }
 
-    fun printError(error: String) {
+    private fun printError(error: String) {
         consoleAdapter.addErrorLine(error)
     }
 
-    fun printResult(result: String) {
+    private fun printResult(result: String) {
         consoleAdapter.addResultLine("<= $result")
     }
 
-    fun clearOutput() {
+    private fun clearOutput() {
         consoleAdapter.clear()
     }
 }
