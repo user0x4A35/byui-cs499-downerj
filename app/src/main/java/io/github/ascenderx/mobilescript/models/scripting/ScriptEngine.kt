@@ -43,20 +43,28 @@ class ScriptEngine private constructor(handler: Handler) {
     private class ScriptRunnable(private val handler: Handler) : Runnable {
         val commands: ConcurrentLinkedQueue<String> = ConcurrentLinkedQueue()
         var running: Boolean = true
+        // Cannot init runtime until run() is called in order to preserve Thread-safety for the
+        // V8 runtime.
+        lateinit var runtime: V8
 
-        private fun loop(runtime: V8) {
+        private fun executeCommand(command: String) {
+            try {
+                val result: String = (
+                    runtime.executeScript(command) ?: "undefined"
+                ).toString()
+                sendResultMessage(result)
+            } catch (exception: V8RuntimeException) {
+                val error: String = exception.message ?: ""
+                sendErrorMessage(error)
+            }
+        }
+
+        private fun loop() {
             while (running) {
+                // TODO: Implement full-stop on thread deletion.
                 val command: String? = commands.poll()
                 if (command != null) {
-                    try {
-                        val result: String = (
-                            runtime.executeScript(command) ?: "undefined"
-                        ).toString()
-                        sendResultMessage(result)
-                    } catch (exception: V8RuntimeException) {
-                        val error: String = exception.message ?: ""
-                        sendErrorMessage(error)
-                    }
+                    executeCommand(command)
                 }
             }
             runtime.release(true)
@@ -79,7 +87,7 @@ class ScriptEngine private constructor(handler: Handler) {
         }
 
         override fun run() {
-            val runtime: V8 = V8.createV8Runtime()
+            runtime = V8.createV8Runtime()
             runtime.registerJavaMethod(
                 PrintCallback(handler),
                 "print"
@@ -96,7 +104,7 @@ class ScriptEngine private constructor(handler: Handler) {
                 SleepCallback(),
                 "sleep"
             )
-            loop(runtime)
+            loop()
         }
 
         class PrintCallback(private val handler: Handler) : JavaVoidCallback {
