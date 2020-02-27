@@ -89,7 +89,7 @@ class ScriptEngine private constructor(handler: Handler) {
                 "clear"
             )
             runtime.registerJavaMethod(
-                SleepCallback(handler),
+                SleepCallback(),
                 "sleep"
             )
             loop(runtime)
@@ -130,7 +130,7 @@ class ScriptEngine private constructor(handler: Handler) {
             }
         }
 
-        class SleepCallback(private val handler: Handler) : JavaVoidCallback {
+        class SleepCallback : JavaVoidCallback {
             override fun invoke(receiver: V8Object?, parameters: V8Array?) {
                 if ((parameters == null) || (parameters.length() == 0)) {
                     return
