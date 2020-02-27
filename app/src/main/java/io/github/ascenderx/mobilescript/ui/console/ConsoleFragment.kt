@@ -20,11 +20,13 @@ import io.github.ascenderx.mobilescript.models.scripting.ScriptEngine
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventEmitter
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventListener
 import io.github.ascenderx.mobilescript.models.scripting.ScriptMessageStatus
+import kotlinx.android.synthetic.main.fragment_console.*
 
 class ConsoleFragment : Fragment() {
     private lateinit var consoleViewModel: ConsoleViewModel
     private lateinit var consoleAdapter: ConsoleListAdapter
     private var scriptEngine: ScriptEngine? = null
+    private var currentHistoryIndex: Int = -1
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -60,22 +62,43 @@ class ConsoleFragment : Fragment() {
         // Get components by ID.
         val consoleOutputView: ListView = root.findViewById(R.id.consoleOutput) as ListView
         val editText: TextView = root.findViewById(R.id.editText)
+        val btHistory: Button = root.findViewById(R.id.btHistory)
         val btRun: Button = root.findViewById(R.id.btRun)
 
         // Register the output list.
-        consoleAdapter =
-            ConsoleListAdapter(
-                context as Context
-            )
+        consoleAdapter = ConsoleListAdapter(context as Context)
         consoleOutputView.adapter = consoleAdapter
+
+        // Register the history button.
+        btHistory.isEnabled = false
+        btHistory.setOnClickListener(object : View.OnClickListener {
+            override fun onClick(view: View) {
+                if (scriptEngine == null) {
+                    return
+                }
+                val engine: ScriptEngine = scriptEngine as ScriptEngine
+                val history: List<String> = engine.commandHistory
+                val command: String = history[currentHistoryIndex--]
+                editText.text = command
+                // Disable the button once we've reached the bottom of the history stack.
+                btHistory.isEnabled = currentHistoryIndex >= 0
+            }
+        })
 
         // Register the run button.
         btRun.isEnabled = false
         btRun.setOnClickListener(object : View.OnClickListener {
             override fun onClick(view: View) {
+                if (scriptEngine == null) {
+                    return
+                }
+                val engine: ScriptEngine = scriptEngine as ScriptEngine
+
                 val command = "${editText.text}"
                 printCommand(command)
-                scriptEngine?.evaluate(command)
+                val historyIndex: Int = engine.evaluate(command)
+                currentHistoryIndex = historyIndex
+                btHistory.isEnabled = true
 
                 // Immediately clear the input field.
                 editText.text = ""

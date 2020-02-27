@@ -27,13 +27,17 @@ class ScriptEngine private constructor(handler: Handler) {
             handler
         )
     private val thread: Thread = Thread(runnable)
+    val commandHistory: MutableList<String> = mutableListOf()
 
     init {
         thread.start()
     }
 
-    fun evaluate(command: String) {
+    fun evaluate(command: String): Int {
+        val historyIndex = commandHistory.size
+        commandHistory.add(command)
         runnable.commands.add(command)
+        return historyIndex
     }
 
     private class ScriptRunnable(private val handler: Handler) : Runnable {
