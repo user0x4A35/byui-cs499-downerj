@@ -51,7 +51,24 @@ class ConsoleFragment : Fragment() {
                             enableInputField()
                             btHistory.isEnabled = true
                         }
-
+                        ScriptMessageStatus.RUN_SCRIPT.value -> {
+                            printError(getString(R.string.restart_notification))
+                            scriptEngine?.restart(data)
+                            disableInputField()
+                            btRun.isEnabled = false
+                            btHistory.isEnabled = false
+                        }
+                        ScriptMessageStatus.SCRIPT_END.value -> {
+                            enableInputField()
+                            btRun.isEnabled = false
+                            btHistory.isEnabled = false
+                        }
+                        ScriptMessageStatus.RESTART.value -> {
+                            printError(getString(R.string.restart_notification))
+                            enableInputField()
+                            btRun.isEnabled = false
+                            btHistory.isEnabled = false
+                        }
                     }
                 }
             })

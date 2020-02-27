@@ -6,7 +6,7 @@ import android.util.Log
 import com.eclipsesource.v8.*
 import java.util.concurrent.ConcurrentLinkedQueue
 
-class ScriptEngine private constructor(handler: Handler) {
+class ScriptEngine private constructor(private val handler: Handler) {
     companion object {
         private var instance: ScriptEngine? = null
 
@@ -14,21 +14,27 @@ class ScriptEngine private constructor(handler: Handler) {
             return if (instance != null) {
                 instance as ScriptEngine
             } else {
-                instance =
-                    ScriptEngine(
-                        handler
-                    )
+                instance = ScriptEngine(handler)
                 instance as ScriptEngine
             }
         }
     }
 
-    private val runnable: ScriptRunnable = ScriptRunnable(handler)
-    private val thread: Thread = Thread(runnable)
+    private var runnable: ScriptRunnable = ScriptRunnable(handler)
+    private var thread: Thread = Thread(runnable)
     val commandHistory: MutableList<String> = mutableListOf()
 
+    fun restart(source: String?) {
+        // TODO: Kill current runnable and reset to new instance.
+        runnable.running = false
+        runnable = ScriptRunnable(handler)
+        thread = Thread(runnable)
+        runnable.sources.add(source)
+        thread.start()
+    }
+
     fun addSource(source: String) {
-        runnable.commands.add(source)
+        runnable.sources.add(source)
     }
 
     fun addSources(sources: Iterable<String>) {
@@ -61,6 +67,8 @@ class ScriptEngine private constructor(handler: Handler) {
                 ).toString()
                 if (!isSource) {
                     sendResultMessage(result)
+                } else {
+                    sendSourceFinishMessage()
                 }
             } catch (exception: V8RuntimeException) {
                 val error: String = exception.message ?: ""
@@ -98,6 +106,13 @@ class ScriptEngine private constructor(handler: Handler) {
             val message = handler.obtainMessage(
                 ScriptMessageStatus.ERROR.value,
                 error
+            )
+            handler.sendMessage(message)
+        }
+
+        fun sendSourceFinishMessage() {
+            val message = handler.obtainMessage(
+                ScriptMessageStatus.SCRIPT_END.value
             )
             handler.sendMessage(message)
         }

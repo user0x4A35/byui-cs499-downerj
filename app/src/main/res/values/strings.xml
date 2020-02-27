@@ -6,7 +6,8 @@
     <string name="nav_header_subtitle">GitHub/@ascenderx</string>
     <string name="nav_header_desc">Navigation header</string>
     <string name="action_settings">Settings</string>
-    <string name="action_clear">Clear Console</string>
+    <string name="action_clear">Clear console</string>
+    <string name="action_reset">Reset engine</string>
 
     <string name="menu_console">Console</string>
     <string name="menu_canvas">Canvas</string>
@@ -18,4 +19,5 @@
     <string name="running_hint">Running…</string>
     <string name="history_button">&#x25B2;</string>
     <string name="run_button">Run</string>
+    <string name="restart_notification">&lt;==== Engine restart ====&gt;</string>
 </resources>
