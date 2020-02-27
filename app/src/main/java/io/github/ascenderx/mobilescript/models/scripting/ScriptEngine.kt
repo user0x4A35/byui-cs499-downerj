@@ -88,6 +88,10 @@ class ScriptEngine private constructor(handler: Handler) {
                 ClearCallback(handler),
                 "clear"
             )
+            runtime.registerJavaMethod(
+                SleepCallback(handler),
+                "sleep"
+            )
             loop(runtime)
         }
 
@@ -123,6 +127,20 @@ class ScriptEngine private constructor(handler: Handler) {
                     ScriptMessageStatus.CLEAR.value
                 )
                 handler.sendMessage(message)
+            }
+        }
+
+        class SleepCallback(private val handler: Handler) : JavaVoidCallback {
+            override fun invoke(receiver: V8Object?, parameters: V8Array?) {
+                if ((parameters == null) || (parameters.length() == 0)) {
+                    return
+                }
+                val milliseconds: Long = (parameters[0] as Int).toLong()
+                if (milliseconds < 0) {
+                    return
+                }
+
+                Thread.sleep(milliseconds)
             }
         }
     }
