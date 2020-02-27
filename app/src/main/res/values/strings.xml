@@ -14,6 +14,7 @@
 
     <string name="console_ready">Ready.</string>
     <string name="input_hint">Enter command…</string>
+    <string name="running_hint">Running…</string>
     <string name="history_button">&#x25B2;</string>
     <string name="run_button">Run</string>
 </resources>
