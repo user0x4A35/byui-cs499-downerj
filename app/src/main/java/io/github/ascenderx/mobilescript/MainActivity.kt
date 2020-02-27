@@ -5,6 +5,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.Message
 import android.view.Menu
+import android.view.MenuItem
 import com.google.android.material.navigation.NavigationView
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
@@ -17,12 +18,20 @@ import androidx.appcompat.widget.Toolbar
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEngine
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventEmitter
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventListener
+import io.github.ascenderx.mobilescript.models.scripting.ScriptMessageStatus
 
 class MainActivity : AppCompatActivity(),
     ScriptEventEmitter {
     private lateinit var appBarConfiguration: AppBarConfiguration
     override lateinit var engine: ScriptEngine
     private val listeners: MutableList<ScriptEventListener> = mutableListOf()
+    private val handler: Handler = object : Handler(Looper.getMainLooper()) {
+        override fun handleMessage(msg: Message) {
+            for (listener in listeners) {
+                listener.onMessage(msg)
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,8 +54,19 @@ class MainActivity : AppCompatActivity(),
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         // Inflate the menu; this adds items to the action bar if it is present.
-        // menuInflater.inflate(R.menu.main, menu)
+        menuInflater.inflate(R.menu.main, menu)
         return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            R.id.action_clear -> {
+                val message: Message = handler.obtainMessage(ScriptMessageStatus.CLEAR.value)
+                handler.sendMessage(message)
+                return true
+            }
+            else -> return super.onOptionsItemSelected(item)
+        }
     }
 
     override fun onSupportNavigateUp(): Boolean {
@@ -55,13 +75,7 @@ class MainActivity : AppCompatActivity(),
     }
 
     private fun initScriptEngine() {
-        engine = ScriptEngine.getInstance(object : Handler(Looper.getMainLooper()) {
-            override fun handleMessage(msg: Message) {
-                for (listener in listeners) {
-                    listener.onMessage(msg)
-                }
-            }
-        })
+        engine = ScriptEngine.getInstance(handler)
     }
 
     override fun attachScriptEventListener(listener: ScriptEventListener) {
