@@ -26,7 +26,7 @@
         android:fontFamily="monospace"
         android:hint="@string/input_hint"
         android:importantForAutofill="no"
-        android:inputType="textFilter|textMultiLine"
+        android:inputType="textNoSuggestions|textFilter|textMultiLine"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/btHistory"
         app:layout_constraintStart_toStartOf="parent" />
