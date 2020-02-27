@@ -1,9 +1,11 @@
 package io.github.ascenderx.mobilescript
 
+import android.content.res.AssetManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.Message
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import com.google.android.material.navigation.NavigationView
@@ -19,6 +21,9 @@ import io.github.ascenderx.mobilescript.models.scripting.ScriptEngine
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventEmitter
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventListener
 import io.github.ascenderx.mobilescript.models.scripting.ScriptMessageStatus
+import java.io.IOException
+import java.io.InputStream
+import java.io.InputStreamReader
 
 class MainActivity : AppCompatActivity(),
     ScriptEventEmitter {
@@ -59,13 +64,13 @@ class MainActivity : AppCompatActivity(),
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
+        return when (item.itemId) {
             R.id.action_clear -> {
                 val message: Message = handler.obtainMessage(ScriptMessageStatus.CLEAR.value)
                 handler.sendMessage(message)
-                return true
+                true
             }
-            else -> return super.onOptionsItemSelected(item)
+            else -> super.onOptionsItemSelected(item)
         }
     }
 
@@ -76,6 +81,32 @@ class MainActivity : AppCompatActivity(),
 
     private fun initScriptEngine() {
         engine = ScriptEngine.getInstance(handler)
+        val sources: List<String> = loadScriptAssets()
+        engine.addSources(sources)
+        engine.start()
+    }
+
+    private fun loadScriptAssets(): List<String> {
+        val sources: MutableList<String> = mutableListOf()
+        val paths: Array<String>? = assets.list("sources")
+        if (paths != null) {
+            for (path in paths) {
+                try {
+                    val stream: InputStream = assets.open("sources/$path")
+                    val reader = InputStreamReader(stream)
+                    val buffer = StringBuffer()
+                    var ch: Int = reader.read()
+                    while (ch >= 0) {
+                        buffer.append(ch.toChar())
+                        ch = reader.read()
+                    }
+                    sources.add(buffer.toString())
+                } catch (ex: IOException) {
+                    Log.e("MS.main.loadScripts", ex.message as String)
+                }
+            }
+        }
+        return sources
     }
 
     override fun attachScriptEventListener(listener: ScriptEventListener) {
