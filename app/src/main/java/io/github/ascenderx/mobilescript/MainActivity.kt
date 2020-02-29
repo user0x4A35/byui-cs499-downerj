@@ -36,13 +36,6 @@ class MainActivity : AppCompatActivity(),
     private lateinit var navView: NavigationView
     override lateinit var engine: ScriptEngine
     private val listeners: MutableList<ScriptEventListener> = mutableListOf()
-    private val handler: Handler = object : Handler(Looper.getMainLooper()) {
-        override fun handleMessage(msg: Message) {
-            for (listener in listeners) {
-                listener.onMessage(msg)
-            }
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -80,13 +73,11 @@ class MainActivity : AppCompatActivity(),
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_clear -> {
-                val message: Message = handler.obtainMessage(ScriptEngine.STATUS_CLEAR)
-                handler.sendMessage(message)
+                engine.sendMessage(ScriptEngine.STATUS_CLEAR, null)
                 true
             }
             R.id.action_reset -> {
-                val message: Message = handler.obtainMessage(ScriptEngine.STATUS_RESTART)
-                handler.sendMessage(message)
+                engine.sendMessage(ScriptEngine.STATUS_RESTART, null)
                 true
             }
             else -> super.onOptionsItemSelected(item)
@@ -105,11 +96,7 @@ class MainActivity : AppCompatActivity(),
             try {
                 val source: String = loadScriptFromContentUri(fileUri)
                 // Tell the UI to update for restart.
-                val message: Message = handler.obtainMessage(
-                    ScriptEngine.STATUS_SCRIPT_RUN,
-                    source
-                )
-                handler.sendMessage(message)
+                engine.sendMessage(ScriptEngine.STATUS_SCRIPT_RUN, source)
             } catch (ex: IOException) {
                 Log.e("MS.main.openScript", ex.message as String)
             }
@@ -127,7 +114,13 @@ class MainActivity : AppCompatActivity(),
     }
 
     private fun initScriptEngine() {
-        engine = ScriptEngine.getInstance(handler)
+        engine = ScriptEngine.getInstance(object : Handler(Looper.getMainLooper()) {
+            override fun handleMessage(msg: Message) {
+                for (listener in listeners) {
+                    listener.onMessage(msg)
+                }
+            }
+        })
         val sources: List<String> = loadScriptAssets()
         engine.addSources(sources)
         engine.start()
