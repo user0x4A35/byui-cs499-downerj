@@ -12,7 +12,6 @@ import android.view.Menu
 import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
-import androidx.core.view.isVisible
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
@@ -23,7 +22,6 @@ import com.google.android.material.navigation.NavigationView
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEngine
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventEmitter
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventListener
-import io.github.ascenderx.mobilescript.models.scripting.ScriptMessageStatus
 import java.io.IOException
 import java.io.InputStream
 import java.io.InputStreamReader
@@ -82,12 +80,12 @@ class MainActivity : AppCompatActivity(),
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_clear -> {
-                val message: Message = handler.obtainMessage(ScriptMessageStatus.CLEAR.value)
+                val message: Message = handler.obtainMessage(ScriptEngine.STATUS_CLEAR)
                 handler.sendMessage(message)
                 true
             }
             R.id.action_reset -> {
-                val message: Message = handler.obtainMessage(ScriptMessageStatus.RESTART.value)
+                val message: Message = handler.obtainMessage(ScriptEngine.STATUS_RESTART)
                 handler.sendMessage(message)
                 true
             }
@@ -108,7 +106,7 @@ class MainActivity : AppCompatActivity(),
                 val source: String = loadScriptFromContentUri(fileUri)
                 // Tell the UI to update for restart.
                 val message: Message = handler.obtainMessage(
-                    ScriptMessageStatus.RUN_SCRIPT.value,
+                    ScriptEngine.STATUS_SCRIPT_RUN,
                     source
                 )
                 handler.sendMessage(message)
