@@ -2,12 +2,21 @@ package io.github.ascenderx.mobilescript.models.scripting
 
 import android.os.Handler
 import android.os.Message
-import android.util.Log
 import com.eclipsesource.v8.*
 import java.util.concurrent.ConcurrentLinkedQueue
 
 class ScriptEngine private constructor(private val handler: Handler) {
     companion object {
+        const val STATUS_ERROR = -1
+        const val STATUS_RESULT = 0
+        const val STATUS_PRINT = 1
+        const val STATUS_PRINT_LINE = 2
+        const val STATUS_PROMPT = 3
+        const val STATUS_CLEAR = 4
+        const val STATUS_RESTART = 5
+        const val STATUS_SCRIPT_RUN = 6
+        const val STATUS_SCRIPT_END = 7
+
         private var instance: ScriptEngine? = null
 
         fun getInstance(handler: Handler): ScriptEngine {
@@ -20,14 +29,15 @@ class ScriptEngine private constructor(private val handler: Handler) {
         }
     }
 
-    private var runnable: ScriptRunnable = ScriptRunnable(handler)
+    private var runnable: ScriptRunnable = ScriptRunnable(this)
     private var thread: Thread = Thread(runnable)
+    @Volatile private var userInput: String? = null
     val commandHistory: MutableList<String> = mutableListOf()
 
     fun restart(source: String?) {
         // TODO: Kill current runnable and reset to new instance.
         runnable.running = false
-        runnable = ScriptRunnable(handler)
+        runnable = ScriptRunnable(this)
         thread = Thread(runnable)
         runnable.sources.add(source)
         thread.start()
@@ -52,7 +62,16 @@ class ScriptEngine private constructor(private val handler: Handler) {
         return historyIndex
     }
 
-    private class ScriptRunnable(private val handler: Handler) : Runnable {
+    fun returnPrompt(value: String) {
+        userInput = value
+    }
+
+    private fun sendMessage(what: Int, data: String?) {
+        val message = handler.obtainMessage(what, data)
+        handler.sendMessage(message)
+    }
+
+    private class ScriptRunnable(private val engine: ScriptEngine) : Runnable {
         val commands: ConcurrentLinkedQueue<String> = ConcurrentLinkedQueue()
         val sources: ConcurrentLinkedQueue<String> = ConcurrentLinkedQueue()
         var running: Boolean = false
@@ -66,13 +85,13 @@ class ScriptEngine private constructor(private val handler: Handler) {
                     runtime.executeScript(command) ?: "undefined"
                 ).toString()
                 if (!isSource) {
-                    sendResultMessage(result)
+                    engine.sendMessage(STATUS_RESULT, result)
                 } else {
-                    sendSourceFinishMessage()
+                    engine.sendMessage(STATUS_SCRIPT_END, null)
                 }
             } catch (exception: V8RuntimeException) {
                 val error: String = exception.message ?: ""
-                sendErrorMessage(error)
+                engine.sendMessage(STATUS_ERROR, error)
             }
         }
 
@@ -94,82 +113,55 @@ class ScriptEngine private constructor(private val handler: Handler) {
             runtime.release(true)
         }
 
-        fun sendResultMessage(result: String) {
-            val message: Message = handler.obtainMessage(
-                ScriptMessageStatus.RESULT.value,
-                result
-            )
-            handler.sendMessage(message)
-        }
-
-        fun sendErrorMessage(error: String) {
-            val message = handler.obtainMessage(
-                ScriptMessageStatus.ERROR.value,
-                error
-            )
-            handler.sendMessage(message)
-        }
-
-        fun sendSourceFinishMessage() {
-            val message = handler.obtainMessage(
-                ScriptMessageStatus.SCRIPT_END.value
-            )
-            handler.sendMessage(message)
-        }
-
         override fun run() {
             runtime = V8.createV8Runtime()
             runtime.registerJavaMethod(
-                PrintCallback(handler),
+                PrintCallback(engine),
                 "print"
             )
             runtime.registerJavaMethod(
-                PrintLineCallback(handler),
+                PrintLineCallback(engine),
                 "println"
             )
             runtime.registerJavaMethod(
-                ClearCallback(handler),
+                ClearCallback(engine),
                 "clear"
             )
             runtime.registerJavaMethod(
                 SleepCallback(),
                 "sleep"
             )
+            runtime.registerJavaMethod(
+                PromptCallback(engine),
+                "prompt"
+            )
             loop()
         }
 
-        class PrintCallback(private val handler: Handler) : JavaVoidCallback {
+        class PrintCallback(private val engine: ScriptEngine) : JavaVoidCallback {
             override fun invoke(receiver: V8Object?, parameters: V8Array?) {
                 if ((parameters == null) || (parameters.length() == 0)) {
                     return
                 }
                 val output = "${parameters[0]}"
-                val message = handler.obtainMessage(ScriptMessageStatus.PRINT.value, output)
-                handler.sendMessage(message)
+                engine.sendMessage(STATUS_PRINT, output)
             }
         }
 
-        class PrintLineCallback(private val handler: Handler) : JavaVoidCallback {
+        class PrintLineCallback(private val engine: ScriptEngine) : JavaVoidCallback {
             override fun invoke(receiver: V8Object?, parameters: V8Array?) {
                 val output: String = if ((parameters == null) || (parameters.length() == 0)) {
                     "\n"
                 } else {
-                    "${parameters[0]}\n"
+                    "${parameters[0]}"
                 }
-                val message: Message = handler.obtainMessage(
-                    ScriptMessageStatus.PRINT.value,
-                    output
-                )
-                handler.sendMessage(message)
+                engine.sendMessage(STATUS_PRINT_LINE, output)
             }
         }
 
-        class ClearCallback(private val handler: Handler) : JavaVoidCallback {
+        class ClearCallback(private val engine: ScriptEngine) : JavaVoidCallback {
             override fun invoke(receiver: V8Object?, parameters: V8Array?) {
-                val message: Message = handler.obtainMessage(
-                    ScriptMessageStatus.CLEAR.value
-                )
-                handler.sendMessage(message)
+                engine.sendMessage(STATUS_CLEAR, null)
             }
         }
 
@@ -184,6 +176,26 @@ class ScriptEngine private constructor(private val handler: Handler) {
                 }
 
                 Thread.sleep(milliseconds)
+            }
+        }
+
+        class PromptCallback(private val engine: ScriptEngine) : JavaCallback {
+            override fun invoke(receiver: V8Object?, parameters: V8Array?): Any? {
+                val prompt: String = if (
+                    parameters != null &&
+                    parameters.length() > 0 &&
+                    parameters[0] != null
+                ) {
+                    parameters[0].toString()
+                } else {
+                    ""
+                }
+
+                engine.userInput = null
+                engine.sendMessage(STATUS_PROMPT, prompt)
+                while (engine.userInput == null) { /* loop */ }
+
+                return engine.userInput
             }
         }
     }
