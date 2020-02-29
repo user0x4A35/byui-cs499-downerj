@@ -66,7 +66,7 @@ class ScriptEngine private constructor(private val handler: Handler) {
         userInput = value
     }
 
-    private fun sendMessage(what: Int, data: String?) {
+    fun sendMessage(what: Int, data: String?) {
         val message = handler.obtainMessage(what, data)
         handler.sendMessage(message)
     }
