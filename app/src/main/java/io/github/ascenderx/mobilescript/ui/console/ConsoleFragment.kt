@@ -106,18 +106,22 @@ class ConsoleFragment : Fragment() {
                 when (inputStatus) {
                     INPUT_MODE_COMMAND -> {
                         val command = "${txtInput.text}"
-                        printCommand(command)
+                        onCommand(command)
                         val historyIndex: Int = engine.evaluate(command)
                         currentHistoryIndex = historyIndex
 
                         // Immediately clear and disable the input field (until
                         // execution completes).
-                        clearInputField()
-                        disableInputField()
-                        disableHistoryButton()
+                        onCommandRun()
                     }
                     INPUT_MODE_PROMPT -> {
+                        val value = "${txtInput.text}"
+                        onPrintLine(value)
+                        engine.returnPrompt(value)
 
+                        // Immediately clear and disable the input field (until
+                        // execution completes).
+                        onPromptSend()
                     }
                 }
             }
@@ -140,12 +144,10 @@ class ConsoleFragment : Fragment() {
 
     private fun enableCommandField() {
         txtInput.isEnabled = true
-        txtInput.hint = getText(R.string.input_hint)
     }
 
     private fun disableInputField() {
         txtInput.isEnabled = false
-        txtInput.hint = getText(R.string.running_hint)
     }
 
     private fun clearInputField() {
@@ -161,7 +163,11 @@ class ConsoleFragment : Fragment() {
     }
 
     private fun determineRunButtonState(text: Editable?) {
-        btRun.isEnabled = text?.isNotEmpty() ?: false
+        if (text?.isNotEmpty() == true) {
+            enableRunButton()
+        } else {
+            disableRunButton()
+        }
     }
 
     private fun disableHistoryButton() {
@@ -173,21 +179,44 @@ class ConsoleFragment : Fragment() {
     }
 
     private fun determineHistoryButtonState() {
-        btHistory.isEnabled = currentHistoryIndex >= 0
+        if (currentHistoryIndex >= 0) {
+            enableHistoryButton()
+        } else {
+            disableHistoryButton()
+        }
     }
 
     private fun enablePromptField() {
         txtInput.isEnabled = true
-        txtInput.hint = getString(R.string.prompt_hint)
     }
 
     private fun enablePromptReturnButton() {
         btRun.isEnabled = true
-        btRun.text = getString(R.string.prompt_return_button)
     }
 
-    private fun printCommand(command: String) {
+    private fun setInputMode(mode: Int) {
+        inputStatus = mode
+        when (inputStatus) {
+            INPUT_MODE_COMMAND -> {
+                txtInput.hint = getText(R.string.input_hint)
+                btRun.text = getString(R.string.run_button)
+            }
+            INPUT_MODE_PROMPT -> {
+                txtInput.hint = getString(R.string.prompt_hint)
+                btRun.text = getString(R.string.prompt_return_button)
+            }
+        }
+    }
+
+    private fun onCommand(command: String) {
         consoleAdapter.addCommandLine("-> $command")
+    }
+
+    private fun onCommandRun() {
+        clearInputField()
+        disableInputField()
+        disableHistoryButton()
+        disableRunButton()
     }
 
     private fun onPrint(text: String) {
@@ -199,24 +228,35 @@ class ConsoleFragment : Fragment() {
     }
 
     private fun onPrompt(prompt: String) {
-        consoleAdapter.addOutput(prompt)
+        setInputMode(INPUT_MODE_PROMPT)
+        consoleAdapter.addOutput("?> $prompt")
         enablePromptField()
         enablePromptReturnButton()
     }
 
+    private fun onPromptSend() {
+        clearInputField()
+        disableInputField()
+        disableHistoryButton()
+        disableRunButton()
+    }
+
     private fun onError(error: String) {
+        setInputMode(INPUT_MODE_COMMAND)
         consoleAdapter.addErrorLine(error)
         enableCommandField()
         enableHistoryButton()
     }
 
     private fun onResult(result: String) {
+        setInputMode(INPUT_MODE_COMMAND)
         consoleAdapter.addResultLine("<= $result")
         enableCommandField()
         enableHistoryButton()
     }
 
     private fun onRestart() {
+        setInputMode(INPUT_MODE_COMMAND)
         consoleAdapter.addErrorLine(getString(R.string.restart_notification))
         enableCommandField()
         disableRunButton()
@@ -232,6 +272,7 @@ class ConsoleFragment : Fragment() {
     }
 
     private fun onScriptEnd() {
+        setInputMode(INPUT_MODE_COMMAND)
         enableCommandField()
         disableRunButton()
         disableHistoryButton()

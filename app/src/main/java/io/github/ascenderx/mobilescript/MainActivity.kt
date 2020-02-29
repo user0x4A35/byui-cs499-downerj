@@ -29,7 +29,7 @@ import java.io.InputStreamReader
 class MainActivity : AppCompatActivity(),
     ScriptEventEmitter {
     companion object {
-        val REQUEST_GET_CONTENT = 1
+        const val REQUEST_GET_CONTENT = 1
     }
 
     private lateinit var appBarConfiguration: AppBarConfiguration
