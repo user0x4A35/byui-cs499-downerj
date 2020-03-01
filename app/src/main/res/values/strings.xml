@@ -22,4 +22,5 @@
     <string name="run_button">Run</string>
     <string name="prompt_return_button">Send</string>
     <string name="restart_notification">&lt;==== Engine restart ====&gt;</string>
+    <string name="interrupt_notification">&lt;==== Engine interrupt ====&gt;</string>
 </resources>

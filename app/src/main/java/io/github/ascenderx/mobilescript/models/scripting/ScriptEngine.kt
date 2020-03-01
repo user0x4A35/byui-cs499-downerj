@@ -1,7 +1,6 @@
 package io.github.ascenderx.mobilescript.models.scripting
 
 import android.os.Handler
-import android.os.Message
 import com.eclipsesource.v8.*
 import java.util.concurrent.ConcurrentLinkedQueue
 
@@ -16,6 +15,7 @@ class ScriptEngine private constructor(private val handler: Handler) {
         const val STATUS_RESTART = 5
         const val STATUS_SCRIPT_RUN = 6
         const val STATUS_SCRIPT_END = 7
+        const val STATUS_INTERRUPT = 8
 
         private var instance: ScriptEngine? = null
 
@@ -29,36 +29,54 @@ class ScriptEngine private constructor(private val handler: Handler) {
         }
     }
 
-    private var runnable: ScriptRunnable = ScriptRunnable(this)
-    private var thread: Thread = Thread(runnable)
+    private var runnable: ScriptRunnable? = ScriptRunnable(this)
+    private var thread: Thread? = Thread(runnable)
     @Volatile private var userInput: String? = null
+    private var busy: Boolean = false
     val commandHistory: MutableList<String> = mutableListOf()
 
-    fun restart(source: String?) {
-        // TODO: Kill current runnable and reset to new instance.
-        runnable.running = false
-        runnable = ScriptRunnable(this)
-        thread = Thread(runnable)
-        runnable.sources.add(source)
-        thread.start()
-    }
-
     fun addSource(source: String) {
-        runnable.sources.add(source)
+        runnable?.sources?.add(source)
     }
 
     fun addSources(sources: Iterable<String>) {
         for (source in sources) {
-            runnable.sources.add(source)
+            runnable?.sources?.add(source)
         }
     }
 
-    fun start() = thread.start()
+    fun start() = thread?.start()
+
+    private fun deleteThread() {
+        runnable?.running = false
+        thread = null
+        runnable = null
+    }
+
+    fun interrupt() {
+        if (!busy) {
+            return
+        }
+
+        runnable?.runtime?.terminateExecution()
+        sendMessage(STATUS_INTERRUPT, null)
+    }
+
+    fun restart(source: String?) {
+        // TODO: Kill current runnable and reset to new instance.
+        interrupt()
+        deleteThread()
+
+        runnable = ScriptRunnable(this)
+        thread = Thread(runnable)
+        runnable?.sources?.add(source)
+        thread?.start()
+    }
 
     fun evaluate(command: String): Int {
         val historyIndex = commandHistory.size
         commandHistory.add(command)
-        runnable.commands.add(command)
+        runnable?.commands?.add(command)
         return historyIndex
     }
 
@@ -107,7 +125,10 @@ class ScriptEngine private constructor(private val handler: Handler) {
                 // TODO: Implement full-stop on thread deletion.
                 val command: String? = commands.poll()
                 if (command != null) {
+                    engine.busy = true
                     executeCommand(command, false)
+                } else {
+                    engine.busy = false
                 }
             }
             runtime.release(true)
@@ -175,7 +196,13 @@ class ScriptEngine private constructor(private val handler: Handler) {
                     return
                 }
 
-                Thread.sleep(milliseconds)
+                val start: Long = System.currentTimeMillis()
+                var current: Long
+                var elapsed: Long
+                do {
+                    current = System.currentTimeMillis()
+                    elapsed = current - start
+                } while (elapsed < milliseconds)
             }
         }
 

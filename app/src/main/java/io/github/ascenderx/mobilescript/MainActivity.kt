@@ -10,6 +10,7 @@ import android.os.Message
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
@@ -168,5 +169,9 @@ class MainActivity : AppCompatActivity(),
 
     override fun attachScriptEventListener(listener: ScriptEventListener) {
         listeners.add(listener)
+    }
+
+    override fun onBackPressed() {
+        engine.interrupt()
     }
 }
