@@ -149,10 +149,6 @@ class ScriptEngine private constructor(private val handler: Handler) {
                 "clear"
             )
             runtime.registerJavaMethod(
-                SleepCallback(),
-                "sleep"
-            )
-            runtime.registerJavaMethod(
                 PromptCallback(engine),
                 "prompt"
             )
@@ -183,26 +179,6 @@ class ScriptEngine private constructor(private val handler: Handler) {
         class ClearCallback(private val engine: ScriptEngine) : JavaVoidCallback {
             override fun invoke(receiver: V8Object?, parameters: V8Array?) {
                 engine.sendMessage(STATUS_CLEAR, null)
-            }
-        }
-
-        class SleepCallback : JavaVoidCallback {
-            override fun invoke(receiver: V8Object?, parameters: V8Array?) {
-                if ((parameters == null) || (parameters.length() == 0)) {
-                    return
-                }
-                val milliseconds: Long = (parameters[0] as Int).toLong()
-                if (milliseconds < 0) {
-                    return
-                }
-
-                val start: Long = System.currentTimeMillis()
-                var current: Long
-                var elapsed: Long
-                do {
-                    current = System.currentTimeMillis()
-                    elapsed = current - start
-                } while (elapsed < milliseconds)
             }
         }
 
