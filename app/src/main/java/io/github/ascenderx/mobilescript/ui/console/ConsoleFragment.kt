@@ -53,6 +53,7 @@ class ConsoleFragment : Fragment() {
                         ScriptEngine.STATUS_SCRIPT_RUN -> onScriptRun(data)
                         ScriptEngine.STATUS_SCRIPT_END -> onScriptEnd()
                         ScriptEngine.STATUS_RESTART -> onRestart()
+                        ScriptEngine.STATUS_INTERRUPT -> onInterrupt()
                     }
                 }
             })
@@ -273,5 +274,11 @@ class ConsoleFragment : Fragment() {
 
     private fun onClear() {
         consoleAdapter.clear()
+    }
+
+    private fun onInterrupt() {
+        consoleAdapter.addErrorLine(getString(R.string.interrupt_notification))
+        setInputMode(INPUT_MODE_COMMAND)
+        enableInputField()
     }
 }
