@@ -1,5 +1,6 @@
 package io.github.ascenderx.mobilescript.ui.console
 
+import android.app.Activity
 import android.content.Context
 import android.os.Bundle
 import android.os.Message
@@ -128,7 +129,7 @@ class ConsoleFragment : Fragment() {
         })
 
         // Register the input field.
-        enableCommandField()
+        enableInputField()
         txtInput.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(text: Editable?) {
                 if (text != null) {
@@ -142,7 +143,7 @@ class ConsoleFragment : Fragment() {
         return root
     }
 
-    private fun enableCommandField() {
+    private fun enableInputField() {
         txtInput.isEnabled = true
     }
 
@@ -186,14 +187,6 @@ class ConsoleFragment : Fragment() {
         }
     }
 
-    private fun enablePromptField() {
-        txtInput.isEnabled = true
-    }
-
-    private fun enablePromptReturnButton() {
-        btRun.isEnabled = true
-    }
-
     private fun setInputMode(mode: Int) {
         inputStatus = mode
         when (inputStatus) {
@@ -230,8 +223,8 @@ class ConsoleFragment : Fragment() {
     private fun onPrompt(prompt: String) {
         setInputMode(INPUT_MODE_PROMPT)
         consoleAdapter.addOutput("?> $prompt")
-        enablePromptField()
-        enablePromptReturnButton()
+        enableInputField()
+        enableRunButton()
     }
 
     private fun onPromptSend() {
@@ -244,21 +237,21 @@ class ConsoleFragment : Fragment() {
     private fun onError(error: String) {
         setInputMode(INPUT_MODE_COMMAND)
         consoleAdapter.addErrorLine(error)
-        enableCommandField()
+        enableInputField()
         enableHistoryButton()
     }
 
     private fun onResult(result: String) {
         setInputMode(INPUT_MODE_COMMAND)
         consoleAdapter.addResultLine("<= $result")
-        enableCommandField()
+        enableInputField()
         enableHistoryButton()
     }
 
     private fun onRestart() {
         setInputMode(INPUT_MODE_COMMAND)
         consoleAdapter.addErrorLine(getString(R.string.restart_notification))
-        enableCommandField()
+        enableInputField()
         disableRunButton()
         disableHistoryButton()
     }
@@ -273,7 +266,7 @@ class ConsoleFragment : Fragment() {
 
     private fun onScriptEnd() {
         setInputMode(INPUT_MODE_COMMAND)
-        enableCommandField()
+        enableInputField()
         disableRunButton()
         disableHistoryButton()
     }
