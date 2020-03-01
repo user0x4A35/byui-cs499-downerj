@@ -33,6 +33,7 @@ class ScriptEngine private constructor(private val handler: Handler) {
     private var thread: Thread? = Thread(runnable)
     @Volatile private var userInput: String? = null
     private var busy: Boolean = false
+    private var interrupted: Boolean = false
     val commandHistory: MutableList<String> = mutableListOf()
 
     fun addSource(source: String) {
@@ -53,18 +54,29 @@ class ScriptEngine private constructor(private val handler: Handler) {
         runnable = null
     }
 
-    fun interrupt() {
+    private fun interrupt(clearErrors: Boolean) {
         if (!busy) {
             return
         }
 
+        interrupted = true
+        runnable?.commands?.clear()
+        runnable?.sources?.clear()
         runnable?.runtime?.terminateExecution()
+        // Run an empty command to "clear" any errors from the runtime.
+        if (clearErrors) {
+            runnable?.commands?.add("")
+        }
         sendMessage(STATUS_INTERRUPT, null)
     }
 
+    fun interrupt() {
+        interrupt(true)
+    }
+
     fun restart(source: String?) {
-        // TODO: Kill current runnable and reset to new instance.
-        interrupt()
+        // TODO: Implement V8 namespace clearing.
+        interrupt(false)
         deleteThread()
 
         runnable = ScriptRunnable(this)
@@ -74,6 +86,7 @@ class ScriptEngine private constructor(private val handler: Handler) {
     }
 
     fun evaluate(command: String): Int {
+        interrupted = false
         val historyIndex = commandHistory.size
         commandHistory.add(command)
         runnable?.commands?.add(command)
@@ -107,8 +120,8 @@ class ScriptEngine private constructor(private val handler: Handler) {
                 } else {
                     engine.sendMessage(STATUS_SCRIPT_END, null)
                 }
-            } catch (exception: V8RuntimeException) {
-                val error: String = exception.message ?: ""
+            } catch (ex: Exception) {
+                val error: String = ex.message ?: ""
                 engine.sendMessage(STATUS_ERROR, error)
             }
         }
@@ -122,7 +135,6 @@ class ScriptEngine private constructor(private val handler: Handler) {
             }
 
             while (running) {
-                // TODO: Implement full-stop on thread deletion.
                 val command: String? = commands.poll()
                 if (command != null) {
                     engine.busy = true
@@ -196,7 +208,7 @@ class ScriptEngine private constructor(private val handler: Handler) {
 
                 engine.userInput = null
                 engine.sendMessage(STATUS_PROMPT, prompt)
-                while (engine.userInput == null) { /* loop */ }
+                while (engine.userInput == null && !engine.interrupted) { /* loop */ }
 
                 return engine.userInput
             }
