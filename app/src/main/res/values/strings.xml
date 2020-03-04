@@ -5,9 +5,11 @@
     <string name="nav_header_title">MobileScript</string>
     <string name="nav_header_subtitle">GitHub/@ascenderx</string>
     <string name="nav_header_desc">Navigation header</string>
+
     <string name="action_settings">Settings</string>
     <string name="action_clear">Clear console</string>
     <string name="action_reset">Reset engine</string>
+    <string name="action_shortcut">Create shortcut&#8230;</string>
 
     <string name="menu_console">Console</string>
     <string name="menu_canvas">Canvas</string>

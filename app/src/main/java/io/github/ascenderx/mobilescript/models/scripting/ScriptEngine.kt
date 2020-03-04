@@ -1,10 +1,21 @@
 package io.github.ascenderx.mobilescript.models.scripting
 
+import android.content.ContentResolver
+import android.content.Context
+import android.content.res.AssetManager
+import android.net.Uri
 import android.os.Handler
 import com.eclipsesource.v8.*
+import java.io.IOException
+import java.io.InputStream
+import java.io.InputStreamReader
 import java.util.concurrent.ConcurrentLinkedQueue
 
-class ScriptEngine private constructor(private val handler: Handler) {
+class ScriptEngine private constructor(
+    private val handler: Handler,
+    private val contentResolver: ContentResolver,
+    private val assetManager: AssetManager
+) {
     companion object {
         const val STATUS_ERROR = -1
         const val STATUS_RESULT = 0
@@ -16,34 +27,104 @@ class ScriptEngine private constructor(private val handler: Handler) {
         const val STATUS_SCRIPT_RUN = 6
         const val STATUS_SCRIPT_END = 7
         const val STATUS_INTERRUPT = 8
+        const val STATUS_SOURCE_LOAD_ERROR = 9
 
         private var instance: ScriptEngine? = null
 
-        fun getInstance(handler: Handler): ScriptEngine {
+        fun getInstance(handler: Handler, context: Context): ScriptEngine {
             return if (instance != null) {
                 instance as ScriptEngine
             } else {
-                instance = ScriptEngine(handler)
+                instance = ScriptEngine(
+                    handler,
+                    context.contentResolver,
+                    context.assets
+                )
                 instance as ScriptEngine
             }
         }
     }
 
-    private var runnable: ScriptRunnable? = ScriptRunnable(this)
-    private var thread: Thread? = Thread(runnable)
+    private var runnable: ScriptRunnable?
+    private var thread: Thread?
     @Volatile private var userInput: String? = null
     private var busy: Boolean = false
     private var interrupted: Boolean = false
     val commandHistory: MutableList<String> = mutableListOf()
+    var currentFileUri: Uri? = null
 
-    fun addSource(source: String) {
-        runnable?.sources?.add(source)
+    init {
+        runnable = ScriptRunnable(this)
+        thread = Thread(runnable)
+
+        val assetPaths: List<String> = getScriptAssetPaths()
+        for (path in assetPaths) {
+            loadAssetSource(path)
+        }
     }
 
-    fun addSources(sources: Iterable<String>) {
-        for (source in sources) {
-            runnable?.sources?.add(source)
+    private fun getScriptAssetPaths(): List<String> {
+        val paths: MutableList<String> = mutableListOf()
+        val fileNames: Array<String>? = assetManager.list("sources")
+
+        if (fileNames != null) {
+            for (fileName in fileNames) {
+                paths.add("sources/$fileName")
+            }
         }
+
+        return paths
+    }
+
+    private fun loadAssetSource(filePath: String) {
+        try {
+            val source: String = readAssetSourceFromPath(filePath)
+            runnable?.sources?.add(source)
+        } catch (ex: IOException) {
+            sendMessage(
+                STATUS_SOURCE_LOAD_ERROR,
+                "Error loading asset source \"$filePath\": ${ex.message}"
+            )
+        }
+    }
+
+    fun loadUserSource(fileUri: Uri) {
+        try {
+            val source: String = readUserSourceFromContentUri(fileUri)
+            runnable?.sources?.add(source)
+            currentFileUri = fileUri
+            sendMessage(STATUS_SCRIPT_RUN, source)
+        } catch (ex: IOException) {
+            sendMessage(
+                STATUS_SOURCE_LOAD_ERROR,
+                "Error loading user source \"${fileUri.path}\": ${ex.message}"
+            )
+        }
+    }
+
+    private fun readAssetSourceFromPath(path: String): String {
+        val stream: InputStream = assetManager.open(path)
+        val reader = InputStreamReader(stream)
+        val buffer = StringBuffer()
+        var ch: Int = reader.read()
+        while (ch >= 0) {
+            buffer.append(ch.toChar())
+            ch = reader.read()
+        }
+        return buffer.toString()
+    }
+
+    private fun readUserSourceFromContentUri(uri: Uri): String {
+        val stream: InputStream = contentResolver.openInputStream(uri)
+            ?: throw IOException("Content stream failed to open")
+        val reader = InputStreamReader(stream)
+        val buffer = StringBuffer()
+        var ch: Int = reader.read()
+        while (ch >= 0) {
+            buffer.append(ch.toChar())
+            ch = reader.read()
+        }
+        return buffer.toString()
     }
 
     fun start() = thread?.start()
@@ -52,6 +133,7 @@ class ScriptEngine private constructor(private val handler: Handler) {
         runnable?.running = false
         thread = null
         runnable = null
+        currentFileUri = null
     }
 
     private fun interrupt(clearErrors: Boolean) {

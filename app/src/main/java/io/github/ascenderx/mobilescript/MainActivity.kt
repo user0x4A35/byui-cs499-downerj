@@ -7,10 +7,10 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.Message
+import android.renderscript.Script
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
@@ -24,8 +24,6 @@ import io.github.ascenderx.mobilescript.models.scripting.ScriptEngine
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventEmitter
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventListener
 import java.io.IOException
-import java.io.InputStream
-import java.io.InputStreamReader
 
 class MainActivity : AppCompatActivity(),
     ScriptEventEmitter {
@@ -81,6 +79,10 @@ class MainActivity : AppCompatActivity(),
                 engine.sendMessage(ScriptEngine.STATUS_RESTART, null)
                 true
             }
+            R.id.action_shortcut -> {
+                createScriptShortcut()
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
     }
@@ -94,13 +96,7 @@ class MainActivity : AppCompatActivity(),
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQUEST_GET_CONTENT && resultCode == Activity.RESULT_OK) {
             val fileUri: Uri = data?.data ?: return
-            try {
-                val source: String = loadScriptFromContentUri(fileUri)
-                // Tell the UI to update for restart.
-                engine.sendMessage(ScriptEngine.STATUS_SCRIPT_RUN, source)
-            } catch (ex: IOException) {
-                Log.e("MS.main.openScript", ex.message as String)
-            }
+            engine.loadUserSource(fileUri)
         }
     }
 
@@ -121,50 +117,14 @@ class MainActivity : AppCompatActivity(),
                     listener.onMessage(msg)
                 }
             }
-        })
-        val sources: List<String> = loadScriptAssets()
-        engine.addSources(sources)
+        }, this)
         engine.start()
     }
 
-    private fun loadScriptAssets(): List<String> {
-        val sources: MutableList<String> = mutableListOf()
-        val fileNames: Array<String>? = assets.list("sources")
-        if (fileNames != null) {
-            for (fileName in fileNames) {
-                try {
-                    sources.add(loadScript("sources/$fileName"))
-                } catch (ex: IOException) {
-                    Log.e("MS.main.loadScripts", ex.message as String)
-                }
-            }
+    private fun createScriptShortcut() {
+        if (engine.currentFileUri == null) {
+            return
         }
-        return sources
-    }
-
-    private fun loadScriptFromContentUri(uri: Uri): String {
-        val stream: InputStream = contentResolver.openInputStream(uri)
-            ?: throw IOException("Content stream failed to open")
-        val reader = InputStreamReader(stream)
-        val buffer = StringBuffer()
-        var ch: Int = reader.read()
-        while (ch >= 0) {
-            buffer.append(ch.toChar())
-            ch = reader.read()
-        }
-        return buffer.toString()
-    }
-
-    private fun loadScript(path: String): String {
-        val stream: InputStream = assets.open(path)
-        val reader = InputStreamReader(stream)
-        val buffer = StringBuffer()
-        var ch: Int = reader.read()
-        while (ch >= 0) {
-            buffer.append(ch.toChar())
-            ch = reader.read()
-        }
-        return buffer.toString()
     }
 
     override fun attachScriptEventListener(listener: ScriptEventListener) {
