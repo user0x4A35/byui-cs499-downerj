@@ -49,11 +49,12 @@ class ConsoleFragment : Fragment() {
                         ScriptEngine.STATUS_CLEAR -> onClear()
                         ScriptEngine.STATUS_ERROR -> onError(data)
                         ScriptEngine.STATUS_RESULT -> onResult(data)
-                        ScriptEngine.STATUS_SCRIPT_RUN -> onScriptRun(data)
+                        ScriptEngine.STATUS_SCRIPT_RUN -> onScriptRun()
                         ScriptEngine.STATUS_SCRIPT_END -> onScriptEnd()
                         ScriptEngine.STATUS_RESTART -> onRestart()
                         ScriptEngine.STATUS_INTERRUPT -> onInterrupt()
                         ScriptEngine.STATUS_SOURCE_LOAD_ERROR -> onSourceLoadError(data)
+                        ScriptEngine.STATUS_SHORTCUT_CREATED -> onShortcutCreated(data)
                     }
                 }
             })
@@ -257,9 +258,8 @@ class ConsoleFragment : Fragment() {
         disableHistoryButton()
     }
 
-    private fun onScriptRun(source: String) {
+    private fun onScriptRun() {
         consoleAdapter.addErrorLine(getString(R.string.restart_notification))
-        scriptEngine?.restart(source)
         disableInputField()
         disableRunButton()
         disableHistoryButton()
@@ -284,5 +284,9 @@ class ConsoleFragment : Fragment() {
 
     private fun onSourceLoadError(error: String) {
         consoleAdapter.addErrorLine(error)
+    }
+
+    private fun onShortcutCreated(uriPath: String) {
+        consoleAdapter.addErrorLine("Shortcut created for $uriPath")
     }
 }

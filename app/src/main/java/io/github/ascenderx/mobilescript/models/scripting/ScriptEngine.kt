@@ -28,6 +28,7 @@ class ScriptEngine private constructor(
         const val STATUS_SCRIPT_END = 7
         const val STATUS_INTERRUPT = 8
         const val STATUS_SOURCE_LOAD_ERROR = 9
+        const val STATUS_SHORTCUT_CREATED = 10
 
         private var instance: ScriptEngine? = null
 
@@ -91,9 +92,9 @@ class ScriptEngine private constructor(
     fun loadUserSource(fileUri: Uri) {
         try {
             val source: String = readUserSourceFromContentUri(fileUri)
-            runnable?.sources?.add(source)
+            restart(source)
             currentFileUri = fileUri
-            sendMessage(STATUS_SCRIPT_RUN, source)
+            sendMessage(STATUS_SCRIPT_RUN, null)
         } catch (ex: IOException) {
             sendMessage(
                 STATUS_SOURCE_LOAD_ERROR,
@@ -133,7 +134,6 @@ class ScriptEngine private constructor(
         runnable?.running = false
         thread = null
         runnable = null
-        currentFileUri = null
     }
 
     private fun interrupt(clearErrors: Boolean) {
@@ -160,6 +160,7 @@ class ScriptEngine private constructor(
         // TODO: Implement V8 namespace clearing.
         interrupt(false)
         deleteThread()
+        // currentFileUri = null
 
         runnable = ScriptRunnable(this)
         thread = Thread(runnable)

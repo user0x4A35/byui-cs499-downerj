@@ -1,16 +1,17 @@
 package io.github.ascenderx.mobilescript
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
+import android.content.pm.ShortcutInfo
+import android.content.pm.ShortcutManager
 import android.net.Uri
-import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.os.Message
+import android.os.*
 import android.renderscript.Script
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
@@ -24,6 +25,7 @@ import io.github.ascenderx.mobilescript.models.scripting.ScriptEngine
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventEmitter
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventListener
 import java.io.IOException
+import java.util.*
 
 class MainActivity : AppCompatActivity(),
     ScriptEventEmitter {
@@ -80,7 +82,9 @@ class MainActivity : AppCompatActivity(),
                 true
             }
             R.id.action_shortcut -> {
-                createScriptShortcut()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
+                    createScriptShortcut()
+                }
                 true
             }
             else -> super.onOptionsItemSelected(item)
@@ -121,10 +125,26 @@ class MainActivity : AppCompatActivity(),
         engine.start()
     }
 
+    @RequiresApi(Build.VERSION_CODES.N_MR1)
     private fun createScriptShortcut() {
         if (engine.currentFileUri == null) {
             return
         }
+
+        val shortcutManager: ShortcutManager = getSystemService(
+            ShortcutManager::class.java
+        ) as ShortcutManager
+        val uri: Uri = engine.currentFileUri as Uri
+        val shortcut = ShortcutInfo.Builder(this, "id0")
+            .setShortLabel("Script")
+            .setLongLabel("Run user script")
+            .setIntent(Intent(Intent.ACTION_VIEW, uri))
+            .build()
+        shortcutManager.dynamicShortcuts = listOf(shortcut)
+        engine.sendMessage(
+            ScriptEngine.STATUS_SHORTCUT_CREATED,
+            uri.path
+        )
     }
 
     override fun attachScriptEventListener(listener: ScriptEventListener) {
