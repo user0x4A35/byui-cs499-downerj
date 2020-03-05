@@ -95,13 +95,15 @@ class ScriptEngine private constructor(
             restart(source)
             currentFileUri = fileUri
             sendMessage(STATUS_SCRIPT_RUN, null)
-        } catch (ex: IOException) {
+        } catch (ex: Exception) {
             sendMessage(
                 STATUS_SOURCE_LOAD_ERROR,
                 "Error loading user source \"${fileUri.path}\": ${ex.message}"
             )
         }
     }
+
+    fun startEmpty() = thread?.start()
 
     private fun readAssetSourceFromPath(path: String): String {
         val stream: InputStream = assetManager.open(path)
@@ -127,8 +129,6 @@ class ScriptEngine private constructor(
         }
         return buffer.toString()
     }
-
-    fun start() = thread?.start()
 
     private fun deleteThread() {
         runnable?.running = false

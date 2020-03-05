@@ -62,7 +62,8 @@ class MainActivity : AppCompatActivity(),
         })
 
         // Start up the scripting engine.
-        initScriptEngine()
+        val uri: Uri? = intent?.data
+        initScriptEngine(uri)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -98,7 +99,7 @@ class MainActivity : AppCompatActivity(),
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_GET_CONTENT && resultCode == Activity.RESULT_OK) {
+        if (requestCode == REQUEST_GET_CONTENT && resultCode == RESULT_OK) {
             val fileUri: Uri = data?.data ?: return
             engine.loadUserSource(fileUri)
         }
@@ -114,7 +115,7 @@ class MainActivity : AppCompatActivity(),
         )
     }
 
-    private fun initScriptEngine() {
+    private fun initScriptEngine(fileUri: Uri?) {
         engine = ScriptEngine.getInstance(object : Handler(Looper.getMainLooper()) {
             override fun handleMessage(msg: Message) {
                 for (listener in listeners) {
@@ -122,7 +123,11 @@ class MainActivity : AppCompatActivity(),
                 }
             }
         }, this)
-        engine.start()
+        if (fileUri != null) {
+            engine.loadUserSource(fileUri)
+        } else {
+            engine.startEmpty()
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.N_MR1)
@@ -135,10 +140,12 @@ class MainActivity : AppCompatActivity(),
             ShortcutManager::class.java
         ) as ShortcutManager
         val uri: Uri = engine.currentFileUri as Uri
+        val intent = Intent(Intent.ACTION_VIEW, uri)
+        intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
         val shortcut = ShortcutInfo.Builder(this, "id0")
             .setShortLabel("Script")
             .setLongLabel("Run user script")
-            .setIntent(Intent(Intent.ACTION_VIEW, uri))
+            .setIntent(intent)
             .build()
         shortcutManager.dynamicShortcuts = listOf(shortcut)
         engine.sendMessage(
