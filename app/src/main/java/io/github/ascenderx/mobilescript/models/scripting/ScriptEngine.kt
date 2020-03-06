@@ -32,6 +32,10 @@ class ScriptEngine private constructor(
 
         private var instance: ScriptEngine? = null
 
+        fun isInitialized(): Boolean {
+            return instance != null
+        }
+
         fun getInstance(handler: Handler, context: Context): ScriptEngine {
             return if (instance != null) {
                 instance as ScriptEngine
@@ -130,7 +134,7 @@ class ScriptEngine private constructor(
         return buffer.toString()
     }
 
-    private fun deleteThread() {
+    fun kill() {
         runnable?.running = false
         thread = null
         runnable = null
@@ -159,7 +163,7 @@ class ScriptEngine private constructor(
     fun restart(source: String?) {
         // TODO: Implement V8 namespace clearing.
         interrupt(false)
-        deleteThread()
+        kill()
         // currentFileUri = null
 
         runnable = ScriptRunnable(this)

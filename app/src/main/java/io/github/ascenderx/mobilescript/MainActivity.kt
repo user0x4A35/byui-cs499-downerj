@@ -1,10 +1,12 @@
 package io.github.ascenderx.mobilescript
 
 import android.app.Activity
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
+import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.*
 import android.renderscript.Script
@@ -66,6 +68,11 @@ class MainActivity : AppCompatActivity(),
         initScriptEngine(uri)
     }
 
+    override fun onDestroy() {
+        engine.kill()
+        super.onDestroy()
+    }
+
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         // Inflate the menu; this adds items to the action bar if it is present.
         menuInflater.inflate(R.menu.main, menu)
@@ -83,7 +90,7 @@ class MainActivity : AppCompatActivity(),
                 true
             }
             R.id.action_shortcut -> {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     createScriptShortcut()
                 }
                 true
@@ -115,14 +122,19 @@ class MainActivity : AppCompatActivity(),
         )
     }
 
-    private fun initScriptEngine(fileUri: Uri?) {
-        engine = ScriptEngine.getInstance(object : Handler(Looper.getMainLooper()) {
+    private fun getScriptEngineInstance(): ScriptEngine {
+        return ScriptEngine.getInstance(object : Handler(Looper.getMainLooper()) {
             override fun handleMessage(msg: Message) {
                 for (listener in listeners) {
                     listener.onMessage(msg)
                 }
             }
         }, this)
+    }
+
+    private fun initScriptEngine(fileUri: Uri?) {
+        engine = getScriptEngineInstance()
+
         if (fileUri != null) {
             engine.loadUserSource(fileUri)
         } else {
@@ -130,28 +142,24 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.N_MR1)
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun createScriptShortcut() {
-        if (engine.currentFileUri == null) {
-            return
-        }
+        val shortcutManager: ShortcutManager? = getSystemService(ShortcutManager::class.java)
+        if (shortcutManager!!.isRequestPinShortcutSupported) {
+            if (engine.currentFileUri == null) {
+                return
+            }
 
-        val shortcutManager: ShortcutManager = getSystemService(
-            ShortcutManager::class.java
-        ) as ShortcutManager
-        val uri: Uri = engine.currentFileUri as Uri
-        val intent = Intent(Intent.ACTION_VIEW, uri)
-        intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
-        val shortcut = ShortcutInfo.Builder(this, "id0")
-            .setShortLabel("Script")
-            .setLongLabel("Run user script")
-            .setIntent(intent)
-            .build()
-        shortcutManager.dynamicShortcuts = listOf(shortcut)
-        engine.sendMessage(
-            ScriptEngine.STATUS_SHORTCUT_CREATED,
-            uri.path
-        )
+            val uri: Uri = engine.currentFileUri as Uri
+            val intent = Intent(Intent.ACTION_VIEW, uri)
+            intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+            val pinShortcutInfo: ShortcutInfo = ShortcutInfo.Builder(this, "shortcut0")
+                .setIcon(Icon.createWithResource(this, R.drawable.ic_launcher_foreground))
+                .setShortLabel("Script")
+                .setIntent(intent)
+                .build()
+            shortcutManager.requestPinShortcut(pinShortcutInfo,null)
+        }
     }
 
     override fun attachScriptEventListener(listener: ScriptEventListener) {

@@ -21,8 +21,8 @@ import io.github.ascenderx.mobilescript.models.scripting.ScriptEventListener
 
 class ConsoleFragment : Fragment() {
     companion object {
-        private const val INPUT_MODE_COMMAND: Int = 0
-        private const val INPUT_MODE_PROMPT: Int = 1
+        private const val INPUT_MODE_COMMAND = 0
+        private const val INPUT_MODE_PROMPT = 1
     }
 
     private lateinit var consoleViewModel: ConsoleViewModel
