@@ -11,11 +11,7 @@ import java.io.InputStream
 import java.io.InputStreamReader
 import java.util.concurrent.ConcurrentLinkedQueue
 
-class ScriptEngine private constructor(
-    private val handler: Handler,
-    private val contentResolver: ContentResolver,
-    private val assetManager: AssetManager
-) {
+class ScriptEngine (private val handler: Handler, context: Context) {
     companion object {
         const val STATUS_ERROR = -1
         const val STATUS_RESULT = 0
@@ -29,27 +25,10 @@ class ScriptEngine private constructor(
         const val STATUS_INTERRUPT = 8
         const val STATUS_SOURCE_LOAD_ERROR = 9
         const val STATUS_SHORTCUT_CREATED = 10
-
-        private var instance: ScriptEngine? = null
-
-        fun isInitialized(): Boolean {
-            return instance != null
-        }
-
-        fun getInstance(handler: Handler, context: Context): ScriptEngine {
-            return if (instance != null) {
-                instance as ScriptEngine
-            } else {
-                instance = ScriptEngine(
-                    handler,
-                    context.contentResolver,
-                    context.assets
-                )
-                instance as ScriptEngine
-            }
-        }
     }
 
+    private val contentResolver: ContentResolver = context.contentResolver
+    private val assetManager: AssetManager = context.assets
     private var runnable: ScriptRunnable?
     private var thread: Thread?
     @Volatile private var userInput: String? = null

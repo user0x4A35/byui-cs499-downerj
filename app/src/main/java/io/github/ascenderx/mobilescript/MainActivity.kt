@@ -122,18 +122,14 @@ class MainActivity : AppCompatActivity(),
         )
     }
 
-    private fun getScriptEngineInstance(): ScriptEngine {
-        return ScriptEngine.getInstance(object : Handler(Looper.getMainLooper()) {
+    private fun initScriptEngine(fileUri: Uri?) {
+        engine = ScriptEngine(object : Handler(Looper.getMainLooper()) {
             override fun handleMessage(msg: Message) {
                 for (listener in listeners) {
                     listener.onMessage(msg)
                 }
             }
         }, this)
-    }
-
-    private fun initScriptEngine(fileUri: Uri?) {
-        engine = getScriptEngineInstance()
 
         if (fileUri != null) {
             engine.loadUserSource(fileUri)
