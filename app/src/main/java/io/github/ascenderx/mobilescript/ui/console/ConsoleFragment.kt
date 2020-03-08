@@ -166,7 +166,7 @@ class ConsoleFragment : Fragment() {
     }
 
     private fun determineRunButtonState(text: Editable?) {
-        if (text?.isNotEmpty() == true) {
+        if (text!!.isNotEmpty()) {
             enableRunButton()
         } else {
             disableRunButton()

@@ -6,8 +6,10 @@ import android.content.pm.ShortcutManager
 import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.*
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.webkit.MimeTypeMap
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
@@ -21,6 +23,7 @@ import com.google.android.material.navigation.NavigationView
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEngine
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventEmitter
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventListener
+import java.net.URLConnection
 
 class MainActivity : AppCompatActivity(),
     ScriptEventEmitter {
@@ -122,9 +125,8 @@ class MainActivity : AppCompatActivity(),
     }
 
     private fun showScriptOpenDialog() {
-        val intent = Intent()
+        val intent = Intent(Intent.ACTION_GET_CONTENT)
         intent.type = "*/*"
-        intent.action = Intent.ACTION_GET_CONTENT
         startActivityForResult(
             Intent.createChooser(intent, "Select a file"),
             REQUEST_GET_CONTENT
@@ -156,11 +158,18 @@ class MainActivity : AppCompatActivity(),
             }
 
             val uri: Uri = engine.currentFileUri as Uri
-            val intent = Intent(Intent.ACTION_VIEW, uri)
+            val intent = Intent(
+                Intent.ACTION_VIEW,
+                uri,
+                this,
+                MainActivity::class.java
+            )
+            intent.type = "*/*"
+            intent.data = uri
             intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+            // TODO: Create fragment to let user customize shortcut label.
             val pinShortcutInfo: ShortcutInfo = ShortcutInfo.Builder(this, "scriptShortcut")
                 .setIcon(Icon.createWithResource(this, R.drawable.ic_launcher_foreground))
-                // TODO: Create fragment to let user customize shortcut label.
                 .setShortLabel(uri.toString())
                 .setIntent(intent)
                 .build()
