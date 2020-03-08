@@ -1,16 +1,16 @@
 package io.github.ascenderx.mobilescript
 
-import android.app.Activity
 import android.content.Intent
+import android.content.pm.ShortcutInfo
+import android.content.pm.ShortcutManager
+import android.graphics.drawable.Icon
 import android.net.Uri
-import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.os.Message
+import android.os.*
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
-import android.widget.Toast
+import android.webkit.MimeTypeMap
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
@@ -23,9 +23,7 @@ import com.google.android.material.navigation.NavigationView
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEngine
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventEmitter
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventListener
-import java.io.IOException
-import java.io.InputStream
-import java.io.InputStreamReader
+import java.net.URLConnection
 
 class MainActivity : AppCompatActivity(),
     ScriptEventEmitter {
@@ -62,12 +60,34 @@ class MainActivity : AppCompatActivity(),
         })
 
         // Start up the scripting engine.
-        initScriptEngine()
+        val uri: Uri? = intent?.data
+        initScriptEngine(uri)
+    }
+
+    override fun onDestroy() {
+        engine.kill()
+        super.onDestroy()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         // Inflate the menu; this adds items to the action bar if it is present.
         menuInflater.inflate(R.menu.main, menu)
+
+        // Initially hide the shortcut creation menu item.
+        val shortcutMenuItem: MenuItem? = menu.findItem(R.id.action_shortcut)
+        shortcutMenuItem?.isVisible = false
+
+        attachScriptEventListener(object : ScriptEventListener {
+            override fun onMessage(msg: Message) {
+                when (msg.what) {
+                    ScriptEngine.STATUS_SCRIPT_RUN -> {
+                        // Disable shortcut creation if phone is too old.
+                        shortcutMenuItem?.isVisible = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                    }
+                }
+            }
+        })
+
         return true
     }
 
@@ -81,6 +101,12 @@ class MainActivity : AppCompatActivity(),
                 engine.sendMessage(ScriptEngine.STATUS_RESTART, null)
                 true
             }
+            R.id.action_shortcut -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    createScriptShortcut()
+                }
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
     }
@@ -92,79 +118,64 @@ class MainActivity : AppCompatActivity(),
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_GET_CONTENT && resultCode == Activity.RESULT_OK) {
+        if (requestCode == REQUEST_GET_CONTENT && resultCode == RESULT_OK) {
             val fileUri: Uri = data?.data ?: return
-            try {
-                val source: String = loadScriptFromContentUri(fileUri)
-                // Tell the UI to update for restart.
-                engine.sendMessage(ScriptEngine.STATUS_SCRIPT_RUN, source)
-            } catch (ex: IOException) {
-                Log.e("MS.main.openScript", ex.message as String)
-            }
+            engine.loadUserSource(fileUri)
         }
     }
 
     private fun showScriptOpenDialog() {
-        val intent = Intent()
+        val intent = Intent(Intent.ACTION_GET_CONTENT)
         intent.type = "*/*"
-        intent.action = Intent.ACTION_GET_CONTENT
         startActivityForResult(
             Intent.createChooser(intent, "Select a file"),
             REQUEST_GET_CONTENT
         )
     }
 
-    private fun initScriptEngine() {
-        engine = ScriptEngine.getInstance(object : Handler(Looper.getMainLooper()) {
+    private fun initScriptEngine(fileUri: Uri?) {
+        engine = ScriptEngine(object : Handler(Looper.getMainLooper()) {
             override fun handleMessage(msg: Message) {
                 for (listener in listeners) {
                     listener.onMessage(msg)
                 }
             }
-        })
-        val sources: List<String> = loadScriptAssets()
-        engine.addSources(sources)
-        engine.start()
+        }, this)
+
+        if (fileUri != null) {
+            engine.loadUserSource(fileUri)
+        } else {
+            engine.startEmpty()
+        }
     }
 
-    private fun loadScriptAssets(): List<String> {
-        val sources: MutableList<String> = mutableListOf()
-        val fileNames: Array<String>? = assets.list("sources")
-        if (fileNames != null) {
-            for (fileName in fileNames) {
-                try {
-                    sources.add(loadScript("sources/$fileName"))
-                } catch (ex: IOException) {
-                    Log.e("MS.main.loadScripts", ex.message as String)
-                }
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun createScriptShortcut() {
+        val shortcutManager: ShortcutManager? = getSystemService(ShortcutManager::class.java)
+        if (shortcutManager!!.isRequestPinShortcutSupported) {
+            if (engine.currentFileUri == null) {
+                return
             }
-        }
-        return sources
-    }
 
-    private fun loadScriptFromContentUri(uri: Uri): String {
-        val stream: InputStream = contentResolver.openInputStream(uri)
-            ?: throw IOException("Content stream failed to open")
-        val reader = InputStreamReader(stream)
-        val buffer = StringBuffer()
-        var ch: Int = reader.read()
-        while (ch >= 0) {
-            buffer.append(ch.toChar())
-            ch = reader.read()
+            val uri: Uri = engine.currentFileUri as Uri
+            val intent = Intent(
+                Intent.ACTION_MAIN,
+                uri,
+                this,
+                MainActivity::class.java
+            )
+            intent.type = "*/*"
+            intent.data = uri
+            intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+            intent.`package` = "io.github.ascenderx.mobilescript"
+            // TODO: Create fragment to let user customize shortcut label.
+            val pinShortcutInfo: ShortcutInfo = ShortcutInfo.Builder(this, "scriptShortcut")
+                .setIcon(Icon.createWithResource(this, R.drawable.ic_launcher_foreground))
+                .setShortLabel(uri.toString())
+                .setIntent(intent)
+                .build()
+            shortcutManager.requestPinShortcut(pinShortcutInfo, null)
         }
-        return buffer.toString()
-    }
-
-    private fun loadScript(path: String): String {
-        val stream: InputStream = assets.open(path)
-        val reader = InputStreamReader(stream)
-        val buffer = StringBuffer()
-        var ch: Int = reader.read()
-        while (ch >= 0) {
-            buffer.append(ch.toChar())
-            ch = reader.read()
-        }
-        return buffer.toString()
     }
 
     override fun attachScriptEventListener(listener: ScriptEventListener) {

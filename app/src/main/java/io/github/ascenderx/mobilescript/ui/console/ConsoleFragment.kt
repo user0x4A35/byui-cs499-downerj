@@ -1,9 +1,9 @@
 package io.github.ascenderx.mobilescript.ui.console
 
-import android.app.Activity
 import android.content.Context
 import android.os.Bundle
 import android.os.Message
+import android.renderscript.Script
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
@@ -14,7 +14,6 @@ import android.widget.ListView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
-
 import io.github.ascenderx.mobilescript.R
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEngine
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventEmitter
@@ -22,8 +21,8 @@ import io.github.ascenderx.mobilescript.models.scripting.ScriptEventListener
 
 class ConsoleFragment : Fragment() {
     companion object {
-        private const val INPUT_MODE_COMMAND: Int = 0
-        private const val INPUT_MODE_PROMPT: Int = 1
+        private const val INPUT_MODE_COMMAND = 0
+        private const val INPUT_MODE_PROMPT = 1
     }
 
     private lateinit var consoleViewModel: ConsoleViewModel
@@ -50,10 +49,12 @@ class ConsoleFragment : Fragment() {
                         ScriptEngine.STATUS_CLEAR -> onClear()
                         ScriptEngine.STATUS_ERROR -> onError(data)
                         ScriptEngine.STATUS_RESULT -> onResult(data)
-                        ScriptEngine.STATUS_SCRIPT_RUN -> onScriptRun(data)
+                        ScriptEngine.STATUS_SCRIPT_RUN -> onScriptRun()
                         ScriptEngine.STATUS_SCRIPT_END -> onScriptEnd()
                         ScriptEngine.STATUS_RESTART -> onRestart()
                         ScriptEngine.STATUS_INTERRUPT -> onInterrupt()
+                        ScriptEngine.STATUS_SOURCE_LOAD_ERROR -> onSourceLoadError(data)
+                        ScriptEngine.STATUS_SHORTCUT_CREATED -> onShortcutCreated(data)
                     }
                 }
             })
@@ -165,7 +166,7 @@ class ConsoleFragment : Fragment() {
     }
 
     private fun determineRunButtonState(text: Editable?) {
-        if (text?.isNotEmpty() == true) {
+        if (text!!.isNotEmpty()) {
             enableRunButton()
         } else {
             disableRunButton()
@@ -257,9 +258,8 @@ class ConsoleFragment : Fragment() {
         disableHistoryButton()
     }
 
-    private fun onScriptRun(source: String) {
+    private fun onScriptRun() {
         consoleAdapter.addErrorLine(getString(R.string.restart_notification))
-        scriptEngine?.restart(source)
         disableInputField()
         disableRunButton()
         disableHistoryButton()
@@ -280,5 +280,13 @@ class ConsoleFragment : Fragment() {
         consoleAdapter.addErrorLine(getString(R.string.interrupt_notification))
         setInputMode(INPUT_MODE_COMMAND)
         enableInputField()
+    }
+
+    private fun onSourceLoadError(error: String) {
+        consoleAdapter.addErrorLine(error)
+    }
+
+    private fun onShortcutCreated(uriPath: String) {
+        consoleAdapter.addErrorLine("Shortcut created for $uriPath")
     }
 }
