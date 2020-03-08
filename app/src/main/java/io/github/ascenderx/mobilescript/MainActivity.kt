@@ -167,6 +167,7 @@ class MainActivity : AppCompatActivity(),
             intent.type = "*/*"
             intent.data = uri
             intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+            intent.`package` = "io.github.ascenderx.mobilescript"
             // TODO: Create fragment to let user customize shortcut label.
             val pinShortcutInfo: ShortcutInfo = ShortcutInfo.Builder(this, "scriptShortcut")
                 .setIcon(Icon.createWithResource(this, R.drawable.ic_launcher_foreground))
