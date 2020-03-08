@@ -1,16 +1,11 @@
 package io.github.ascenderx.mobilescript
 
-import android.app.Activity
-import android.app.PendingIntent
-import android.content.Context
 import android.content.Intent
 import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
 import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.*
-import android.renderscript.Script
-import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import androidx.annotation.RequiresApi
@@ -26,8 +21,6 @@ import com.google.android.material.navigation.NavigationView
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEngine
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventEmitter
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventListener
-import java.io.IOException
-import java.util.*
 
 class MainActivity : AppCompatActivity(),
     ScriptEventEmitter {
@@ -76,6 +69,22 @@ class MainActivity : AppCompatActivity(),
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         // Inflate the menu; this adds items to the action bar if it is present.
         menuInflater.inflate(R.menu.main, menu)
+
+        // Initially hide the shortcut creation menu item.
+        val shortcutMenuItem: MenuItem? = menu.findItem(R.id.action_shortcut)
+        shortcutMenuItem?.isVisible = false
+
+        attachScriptEventListener(object : ScriptEventListener {
+            override fun onMessage(msg: Message) {
+                when (msg.what) {
+                    ScriptEngine.STATUS_SCRIPT_RUN -> {
+                        // Disable shortcut creation if phone is too old.
+                        shortcutMenuItem?.isVisible = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                    }
+                }
+            }
+        })
+
         return true
     }
 
@@ -149,9 +158,10 @@ class MainActivity : AppCompatActivity(),
             val uri: Uri = engine.currentFileUri as Uri
             val intent = Intent(Intent.ACTION_VIEW, uri)
             intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
-            val pinShortcutInfo: ShortcutInfo = ShortcutInfo.Builder(this, "shortcut0")
+            val pinShortcutInfo: ShortcutInfo = ShortcutInfo.Builder(this, "scriptShortcut")
                 .setIcon(Icon.createWithResource(this, R.drawable.ic_launcher_foreground))
-                .setShortLabel("Script")
+                // TODO: Create fragment to let user customize shortcut label.
+                .setShortLabel(uri.toString())
                 .setIntent(intent)
                 .build()
             shortcutManager.requestPinShortcut(pinShortcutInfo,null)
