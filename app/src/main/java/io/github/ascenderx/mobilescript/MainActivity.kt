@@ -174,7 +174,7 @@ class MainActivity : AppCompatActivity(),
                 .setShortLabel(uri.toString())
                 .setIntent(intent)
                 .build()
-            shortcutManager.requestPinShortcut(pinShortcutInfo,null)
+            shortcutManager.requestPinShortcut(pinShortcutInfo, null)
         }
     }
 
