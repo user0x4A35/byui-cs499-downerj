@@ -159,7 +159,7 @@ class MainActivity : AppCompatActivity(),
 
             val uri: Uri = engine.currentFileUri as Uri
             val intent = Intent(
-                Intent.ACTION_VIEW,
+                Intent.ACTION_MAIN,
                 uri,
                 this,
                 MainActivity::class.java
