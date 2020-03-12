@@ -6,10 +6,8 @@ import android.content.pm.ShortcutManager
 import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.*
-import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
-import android.webkit.MimeTypeMap
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
@@ -23,7 +21,6 @@ import com.google.android.material.navigation.NavigationView
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEngine
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventEmitter
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventListener
-import java.net.URLConnection
 
 class MainActivity : AppCompatActivity(),
     ScriptEventEmitter {
@@ -170,7 +167,7 @@ class MainActivity : AppCompatActivity(),
             intent.`package` = "io.github.ascenderx.mobilescript"
             // TODO: Create fragment to let user customize shortcut label.
             val pinShortcutInfo: ShortcutInfo = ShortcutInfo.Builder(this, "scriptShortcut")
-                .setIcon(Icon.createWithResource(this, R.drawable.ic_launcher_foreground))
+                .setIcon(Icon.createWithResource(this, R.drawable.ic_script))
                 .setShortLabel(uri.toString())
                 .setIntent(intent)
                 .build()
