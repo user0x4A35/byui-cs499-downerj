@@ -19,19 +19,21 @@ import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import com.google.android.material.navigation.NavigationView
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEngine
-import io.github.ascenderx.mobilescript.models.scripting.ScriptEventEmitter
+import io.github.ascenderx.mobilescript.models.scripting.ScriptEngineHandler
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventListener
 
 class MainActivity : AppCompatActivity(),
-    ScriptEventEmitter {
+    ScriptEngineHandler {
     companion object {
         const val REQUEST_GET_CONTENT = 1
     }
 
     private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var navView: NavigationView
-    override lateinit var engine: ScriptEngine
+    private lateinit var engine: ScriptEngine
     private val listeners: MutableList<ScriptEventListener> = mutableListOf()
+    override val commandHistory: List<String>
+        get() = engine.commandHistory
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,7 +60,7 @@ class MainActivity : AppCompatActivity(),
 
         // Start up the scripting engine.
         val uri: Uri? = intent?.data
-        initScriptEngine(uri)
+        restartScriptEngine(uri)
     }
 
     override fun onDestroy() {
@@ -75,9 +77,9 @@ class MainActivity : AppCompatActivity(),
         shortcutMenuItem?.isVisible = false
 
         attachScriptEventListener(object : ScriptEventListener {
-            override fun onMessage(msg: Message) {
-                when (msg.what) {
-                    ScriptEngine.STATUS_SCRIPT_RUN -> {
+            override fun onScriptEvent(eventType: Int, data: Any?) {
+                when (eventType) {
+                    ScriptEngine.EVENT_SCRIPT_RUN -> {
                         // Disable shortcut creation if phone is too old.
                         shortcutMenuItem?.isVisible = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
                     }
@@ -91,16 +93,16 @@ class MainActivity : AppCompatActivity(),
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_clear -> {
-                engine.sendMessage(ScriptEngine.STATUS_CLEAR, null)
+                onMenuItemClear()
                 true
             }
             R.id.action_reset -> {
-                engine.sendMessage(ScriptEngine.STATUS_RESTART, null)
+                onMenuItemReset()
                 true
             }
             R.id.action_shortcut -> {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    createScriptShortcut()
+                    onMenuItemCreateShortcut()
                 }
                 true
             }
@@ -117,7 +119,7 @@ class MainActivity : AppCompatActivity(),
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQUEST_GET_CONTENT && resultCode == RESULT_OK) {
             val fileUri: Uri = data?.data ?: return
-            engine.loadUserSource(fileUri)
+            restartScriptEngine(fileUri)
         }
     }
 
@@ -130,24 +132,37 @@ class MainActivity : AppCompatActivity(),
         )
     }
 
-    private fun initScriptEngine(fileUri: Uri?) {
+    private fun restartScriptEngine(fileUri: Uri?) {
         engine = ScriptEngine(object : Handler(Looper.getMainLooper()) {
             override fun handleMessage(msg: Message) {
                 for (listener in listeners) {
-                    listener.onMessage(msg)
+                    listener.onScriptEvent(msg.what, msg.obj)
                 }
             }
         }, this)
 
         if (fileUri != null) {
             engine.loadUserSource(fileUri)
-        } else {
-            engine.startEmpty()
+        }
+        engine.start()
+    }
+
+    private fun onMenuItemClear() {
+        for (listener: ScriptEventListener in listeners) {
+            listener.onScriptEvent(ScriptEngine.EVENT_CLEAR, null)
         }
     }
 
+    private fun onMenuItemReset() {
+        for (listener: ScriptEventListener in listeners) {
+            listener.onScriptEvent(ScriptEngine.EVENT_RESTART, null)
+        }
+        engine.kill()
+        restartScriptEngine(null)
+    }
+
     @RequiresApi(Build.VERSION_CODES.O)
-    private fun createScriptShortcut() {
+    private fun onMenuItemCreateShortcut() {
         val shortcutManager: ShortcutManager? = getSystemService(ShortcutManager::class.java)
         if (shortcutManager!!.isRequestPinShortcutSupported) {
             if (engine.currentFileUri == null) {
@@ -174,6 +189,8 @@ class MainActivity : AppCompatActivity(),
             shortcutManager.requestPinShortcut(pinShortcutInfo, null)
         }
     }
+
+    override fun postData(data: String): Boolean = engine.postData(data)
 
     override fun attachScriptEventListener(listener: ScriptEventListener) {
         listeners.add(listener)

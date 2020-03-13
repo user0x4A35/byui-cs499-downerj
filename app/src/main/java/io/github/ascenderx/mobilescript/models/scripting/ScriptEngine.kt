@@ -13,18 +13,24 @@ import java.util.concurrent.ConcurrentLinkedQueue
 
 class ScriptEngine (private val handler: Handler, context: Context) {
     companion object {
-        const val STATUS_ERROR = -1
-        const val STATUS_RESULT = 0
-        const val STATUS_PRINT = 1
-        const val STATUS_PRINT_LINE = 2
-        const val STATUS_PROMPT = 3
-        const val STATUS_CLEAR = 4
-        const val STATUS_RESTART = 5
-        const val STATUS_SCRIPT_RUN = 6
-        const val STATUS_SCRIPT_END = 7
-        const val STATUS_INTERRUPT = 8
-        const val STATUS_SOURCE_LOAD_ERROR = 9
-        const val STATUS_SHORTCUT_CREATED = 10
+        const val EVENT_SOURCE_LOAD_ERROR = -2
+        const val EVENT_EVALUATE_ERROR = -1
+        const val EVENT_INITIALIZED = 0
+        const val EVENT_RESULT = 1
+        const val EVENT_PRINT = 2
+        const val EVENT_PRINT_LINE = 3
+        const val EVENT_PROMPT = 4
+        const val EVENT_CLEAR = 5
+        const val EVENT_RESTART = 6
+        const val EVENT_SCRIPT_RUN = 7
+        const val EVENT_SCRIPT_END = 8
+        const val EVENT_INTERRUPT = 9
+        const val EVENT_SHORTCUT_CREATED = 10
+
+        const val STATUS_INTERRUPTED = -1
+        const val STATUS_READY = 0
+        const val STATUS_BUSY = 1
+        const val STATUS_WAITING = 2
     }
 
     private val contentResolver: ContentResolver = context.contentResolver
@@ -32,8 +38,7 @@ class ScriptEngine (private val handler: Handler, context: Context) {
     private var runnable: ScriptRunnable?
     private var thread: Thread?
     @Volatile private var userInput: String? = null
-    private var busy: Boolean = false
-    private var interrupted: Boolean = false
+    @Volatile private var status: Int = STATUS_READY
     val commandHistory: MutableList<String> = mutableListOf()
     var currentFileUri: Uri? = null
 
@@ -66,7 +71,7 @@ class ScriptEngine (private val handler: Handler, context: Context) {
             runnable?.sources?.add(source)
         } catch (ex: IOException) {
             sendMessage(
-                STATUS_SOURCE_LOAD_ERROR,
+                EVENT_SOURCE_LOAD_ERROR,
                 "Error loading asset source \"$filePath\": ${ex.message}"
             )
         }
@@ -75,18 +80,16 @@ class ScriptEngine (private val handler: Handler, context: Context) {
     fun loadUserSource(fileUri: Uri) {
         try {
             val source: String = readUserSourceFromContentUri(fileUri)
-            restart(source)
+            runnable?.sources?.add(source)
             currentFileUri = fileUri
-            sendMessage(STATUS_SCRIPT_RUN, null)
+            sendMessage(EVENT_SCRIPT_RUN, null)
         } catch (ex: Exception) {
             sendMessage(
-                STATUS_SOURCE_LOAD_ERROR,
+                EVENT_SOURCE_LOAD_ERROR,
                 "Error loading user source \"${fileUri.path}\": ${ex.message}"
             )
         }
     }
-
-    fun startEmpty() = thread?.start()
 
     private fun readAssetSourceFromPath(path: String): String {
         val stream: InputStream = assetManager.open(path)
@@ -113,54 +116,42 @@ class ScriptEngine (private val handler: Handler, context: Context) {
         return buffer.toString()
     }
 
+    fun start() = thread?.start()
+
     fun kill() {
         runnable?.running = false
-        thread = null
-        runnable = null
+        runnable?.runtime?.terminateExecution()
     }
 
-    private fun interrupt(clearErrors: Boolean) {
-        if (!busy) {
+    fun interrupt() {
+        if (status == STATUS_READY) {
             return
         }
 
-        interrupted = true
+        status = STATUS_INTERRUPTED
         runnable?.commands?.clear()
         runnable?.sources?.clear()
         runnable?.runtime?.terminateExecution()
         // Run an empty command to "clear" any errors from the runtime.
-        if (clearErrors) {
-            runnable?.commands?.add("")
+        runnable?.commands?.add("")
+
+        sendMessage(EVENT_INTERRUPT, null)
+        status = STATUS_READY
+    }
+
+    fun postData(data: String): Boolean {
+        when (status) {
+            STATUS_READY -> {
+                commandHistory.add(data)
+                runnable?.commands?.add(data)
+                return true
+            }
+            STATUS_WAITING -> {
+                userInput = data
+                return true
+            }
         }
-        sendMessage(STATUS_INTERRUPT, null)
-    }
-
-    fun interrupt() {
-        interrupt(true)
-    }
-
-    fun restart(source: String?) {
-        // TODO: Implement V8 namespace clearing.
-        interrupt(false)
-        kill()
-        // currentFileUri = null
-
-        runnable = ScriptRunnable(this)
-        thread = Thread(runnable)
-        runnable?.sources?.add(source)
-        thread?.start()
-    }
-
-    fun evaluate(command: String): Int {
-        interrupted = false
-        val historyIndex = commandHistory.size
-        commandHistory.add(command)
-        runnable?.commands?.add(command)
-        return historyIndex
-    }
-
-    fun returnPrompt(value: String) {
-        userInput = value
+        return false
     }
 
     fun sendMessage(what: Int, data: String?) {
@@ -182,13 +173,13 @@ class ScriptEngine (private val handler: Handler, context: Context) {
                     runtime.executeScript(command) ?: "undefined"
                 ).toString()
                 if (!isSource) {
-                    engine.sendMessage(STATUS_RESULT, result)
+                    engine.sendMessage(EVENT_RESULT, result)
                 } else {
-                    engine.sendMessage(STATUS_SCRIPT_END, null)
+                    engine.sendMessage(EVENT_SCRIPT_END, null)
                 }
             } catch (ex: Exception) {
                 val error: String = ex.message ?: ""
-                engine.sendMessage(STATUS_ERROR, error)
+                engine.sendMessage(EVENT_EVALUATE_ERROR, error)
             }
         }
 
@@ -196,17 +187,20 @@ class ScriptEngine (private val handler: Handler, context: Context) {
             running = true
 
             // Evaluate all sources before starting.
+            engine.status = STATUS_BUSY
             for (source in sources) {
                 executeCommand(source, true)
             }
+            engine.sendMessage(EVENT_INITIALIZED, null)
+            engine.status = STATUS_READY
 
             while (running) {
                 val command: String? = commands.poll()
                 if (command != null) {
-                    engine.busy = true
+                    engine.status = STATUS_BUSY
                     executeCommand(command, false)
-                } else {
-                    engine.busy = false
+                } else if (engine.status != STATUS_INTERRUPTED) {
+                    engine.status = STATUS_READY
                 }
             }
             runtime.release(true)
@@ -239,7 +233,7 @@ class ScriptEngine (private val handler: Handler, context: Context) {
                     return
                 }
                 val output = "${parameters[0]}"
-                engine.sendMessage(STATUS_PRINT, output)
+                engine.sendMessage(EVENT_PRINT, output)
             }
         }
 
@@ -250,13 +244,13 @@ class ScriptEngine (private val handler: Handler, context: Context) {
                 } else {
                     "${parameters[0]}"
                 }
-                engine.sendMessage(STATUS_PRINT_LINE, output)
+                engine.sendMessage(EVENT_PRINT_LINE, output)
             }
         }
 
         class ClearCallback(private val engine: ScriptEngine) : JavaVoidCallback {
             override fun invoke(receiver: V8Object?, parameters: V8Array?) {
-                engine.sendMessage(STATUS_CLEAR, null)
+                engine.sendMessage(EVENT_CLEAR, null)
             }
         }
 
@@ -273,8 +267,11 @@ class ScriptEngine (private val handler: Handler, context: Context) {
                 }
 
                 engine.userInput = null
-                engine.sendMessage(STATUS_PROMPT, prompt)
-                while (engine.userInput == null && !engine.interrupted) { /* loop */ }
+                engine.sendMessage(EVENT_PROMPT, prompt)
+                while (engine.userInput == null) {
+                    engine.status = STATUS_WAITING
+                }
+                engine.status = STATUS_BUSY
 
                 return engine.userInput
             }

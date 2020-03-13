@@ -1,6 +1,7 @@
 package io.github.ascenderx.mobilescript.models.scripting
 
-interface ScriptEventEmitter {
-    val engine: ScriptEngine
+interface ScriptEngineHandler {
+    val commandHistory: List<String>
     fun attachScriptEventListener(listener: ScriptEventListener)
+    fun postData(data: String): Boolean
 }

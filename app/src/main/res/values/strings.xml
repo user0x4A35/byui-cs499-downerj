@@ -23,6 +23,7 @@
     <string name="history_button">&#x25B2;</string>
     <string name="run_button">Run</string>
     <string name="prompt_return_button">Send</string>
-    <string name="restart_notification">&lt;==== Engine restart ====&gt;</string>
-    <string name="interrupt_notification">&lt;==== Engine interrupt ====&gt;</string>
+    <string name="restart_notification">&lt;==== Engine restarted ====&gt;</string>
+    <string name="interrupt_notification">&lt;==== Engine interrupted ====&gt;</string>
+    <string name="shortcut_notification">&lt;==== Shortcut created ====&gt;</string>
 </resources>
