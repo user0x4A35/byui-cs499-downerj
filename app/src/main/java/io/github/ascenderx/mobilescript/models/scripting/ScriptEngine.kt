@@ -6,12 +6,13 @@ import android.content.res.AssetManager
 import android.net.Uri
 import android.os.Handler
 import com.eclipsesource.v8.*
+import io.github.ascenderx.mobilescript.R
 import java.io.IOException
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.util.concurrent.ConcurrentLinkedQueue
 
-class ScriptEngine (private val handler: Handler, context: Context) {
+class ScriptEngine (private val handler: Handler, private val context: Context) {
     companion object {
         const val EVENT_SOURCE_LOAD_ERROR = -2
         const val EVENT_EVALUATE_ERROR = -1
@@ -54,11 +55,12 @@ class ScriptEngine (private val handler: Handler, context: Context) {
 
     private fun getScriptAssetPaths(): List<String> {
         val paths: MutableList<String> = mutableListOf()
-        val fileNames: Array<String>? = assetManager.list("sources")
+        val directory: String = context.getString(R.string.dir_assets_sources)
+        val fileNames: Array<String>? = assetManager.list(directory)
 
         if (fileNames != null) {
             for (fileName in fileNames) {
-                paths.add("sources/$fileName")
+                paths.add("$directory/$fileName")
             }
         }
 
@@ -70,9 +72,10 @@ class ScriptEngine (private val handler: Handler, context: Context) {
             val source: String = readAssetSourceFromPath(filePath)
             runnable?.sources?.add(source)
         } catch (ex: IOException) {
+            val messagePart: String = context.getString(R.string.message_error_asset_source)
             sendMessage(
                 EVENT_SOURCE_LOAD_ERROR,
-                "Error loading asset source \"$filePath\": ${ex.message}"
+                "$messagePart \"$filePath\": ${ex.message}"
             )
         }
     }
@@ -84,9 +87,10 @@ class ScriptEngine (private val handler: Handler, context: Context) {
             currentFileUri = fileUri
             sendMessage(EVENT_SCRIPT_RUN, null)
         } catch (ex: Exception) {
+            val messagePart: String = context.getString(R.string.message_error_user_source)
             sendMessage(
                 EVENT_SOURCE_LOAD_ERROR,
-                "Error loading user source \"${fileUri.path}\": ${ex.message}"
+                "$messagePart \"${fileUri.path}\": ${ex.message}"
             )
         }
     }
@@ -105,7 +109,7 @@ class ScriptEngine (private val handler: Handler, context: Context) {
 
     private fun readUserSourceFromContentUri(uri: Uri): String {
         val stream: InputStream = contentResolver.openInputStream(uri)
-            ?: throw IOException("Content stream failed to open")
+            ?: throw IOException(context.getString(R.string.message_error_content_open))
         val reader = InputStreamReader(stream)
         val buffer = StringBuffer()
         var ch: Int = reader.read()
