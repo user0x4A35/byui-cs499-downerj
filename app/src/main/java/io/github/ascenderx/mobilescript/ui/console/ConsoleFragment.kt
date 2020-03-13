@@ -2,8 +2,6 @@ package io.github.ascenderx.mobilescript.ui.console
 
 import android.content.Context
 import android.os.Bundle
-import android.os.Message
-import android.renderscript.Script
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
@@ -16,7 +14,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import io.github.ascenderx.mobilescript.R
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEngine
-import io.github.ascenderx.mobilescript.models.scripting.ScriptEventEmitter
+import io.github.ascenderx.mobilescript.models.scripting.ScriptEngineHandler
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventListener
 
 class ConsoleFragment : Fragment() {
@@ -31,34 +29,35 @@ class ConsoleFragment : Fragment() {
     private lateinit var txtInput: TextView
     private lateinit var btHistory: Button
     private lateinit var btRun: Button
-    private var scriptEngine: ScriptEngine? = null
+    private lateinit var scriptEngineHandler: ScriptEngineHandler
     private var currentHistoryIndex: Int = -1
     private var inputStatus: Int = INPUT_MODE_COMMAND
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
 
-        if (context is ScriptEventEmitter) {
+        if (context is ScriptEngineHandler) {
+            this.scriptEngineHandler = context
             context.attachScriptEventListener(object : ScriptEventListener {
-                override fun onMessage(msg: Message) {
-                    val data: String = (msg.obj ?: "undefined").toString()
-                    when (msg.what) {
-                        ScriptEngine.STATUS_PRINT -> onPrint(data)
-                        ScriptEngine.STATUS_PRINT_LINE -> onPrintLine(data)
-                        ScriptEngine.STATUS_PROMPT -> onPrompt(data)
-                        ScriptEngine.STATUS_CLEAR -> onClear()
-                        ScriptEngine.STATUS_ERROR -> onError(data)
-                        ScriptEngine.STATUS_RESULT -> onResult(data)
-                        ScriptEngine.STATUS_SCRIPT_RUN -> onScriptRun()
-                        ScriptEngine.STATUS_SCRIPT_END -> onScriptEnd()
-                        ScriptEngine.STATUS_RESTART -> onRestart()
-                        ScriptEngine.STATUS_INTERRUPT -> onInterrupt()
-                        ScriptEngine.STATUS_SOURCE_LOAD_ERROR -> onSourceLoadError(data)
-                        ScriptEngine.STATUS_SHORTCUT_CREATED -> onShortcutCreated(data)
+                override fun onScriptEvent(eventType: Int, data: Any?) {
+                    val text: String = (data ?: "undefined").toString()
+                    when (eventType) {
+                        ScriptEngine.EVENT_INITIALIZED -> onInitialized()
+                        ScriptEngine.EVENT_PRINT -> onPrint(text)
+                        ScriptEngine.EVENT_PRINT_LINE -> onPrintLine(text)
+                        ScriptEngine.EVENT_PROMPT -> onPrompt(text)
+                        ScriptEngine.EVENT_CLEAR -> onClear()
+                        ScriptEngine.EVENT_EVALUATE_ERROR -> onError(text)
+                        ScriptEngine.EVENT_RESULT -> onResult(text)
+                        ScriptEngine.EVENT_SCRIPT_RUN -> onScriptRun()
+                        ScriptEngine.EVENT_SCRIPT_END -> onScriptEnd()
+                        ScriptEngine.EVENT_RESTART -> onRestart()
+                        ScriptEngine.EVENT_INTERRUPT -> onInterrupt()
+                        ScriptEngine.EVENT_SOURCE_LOAD_ERROR -> onSourceLoadError(text)
+                        ScriptEngine.EVENT_SHORTCUT_CREATED -> onShortcutCreated(text)
                     }
                 }
             })
-            scriptEngine = context.engine
         }
     }
 
@@ -86,11 +85,7 @@ class ConsoleFragment : Fragment() {
         disableHistoryButton()
         btHistory.setOnClickListener(object : View.OnClickListener {
             override fun onClick(view: View) {
-                if (scriptEngine == null) {
-                    return
-                }
-                val engine: ScriptEngine = scriptEngine as ScriptEngine
-                val history: List<String> = engine.commandHistory
+                val history: List<String> = scriptEngineHandler.commandHistory
                 val command: String = history[currentHistoryIndex--]
                 txtInput.text = command
                 // Disable the button once we've reached the bottom of the history stack.
@@ -102,16 +97,13 @@ class ConsoleFragment : Fragment() {
         disableRunButton()
         btRun.setOnClickListener(object : View.OnClickListener {
             override fun onClick(view: View) {
-                if (scriptEngine == null) {
-                    return
-                }
-                val engine: ScriptEngine = scriptEngine as ScriptEngine
                 when (inputStatus) {
                     INPUT_MODE_COMMAND -> {
                         val command = "${txtInput.text}"
                         onCommand(command)
-                        val historyIndex: Int = engine.evaluate(command)
-                        currentHistoryIndex = historyIndex
+                        if (scriptEngineHandler.postData(command)) {
+                            currentHistoryIndex = scriptEngineHandler.commandHistory.size - 1
+                        }
 
                         // Immediately clear and disable the input field (until
                         // execution completes).
@@ -120,7 +112,7 @@ class ConsoleFragment : Fragment() {
                     INPUT_MODE_PROMPT -> {
                         val value = "${txtInput.text}"
                         onPrintLine(value)
-                        engine.returnPrompt(value)
+                        scriptEngineHandler.postData(value)
 
                         // Immediately clear and disable the input field (until
                         // execution completes).
@@ -201,6 +193,10 @@ class ConsoleFragment : Fragment() {
                 btRun.text = getString(R.string.prompt_return_button)
             }
         }
+    }
+
+    private fun onInitialized() {
+        consoleAdapter.addErrorLine(getString(R.string.console_ready))
     }
 
     private fun onCommand(command: String) {
@@ -287,6 +283,6 @@ class ConsoleFragment : Fragment() {
     }
 
     private fun onShortcutCreated(uriPath: String) {
-        consoleAdapter.addErrorLine("Shortcut created for $uriPath")
+        consoleAdapter.addErrorLine(getString(R.string.shortcut_notification))
     }
 }
