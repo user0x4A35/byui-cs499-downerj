@@ -73,10 +73,10 @@ class ConsoleFragment : Fragment() {
         val root = inflater.inflate(R.layout.fragment_console, container, false)
 
         // Get components by ID.
-        consoleOutputView = root.findViewById(R.id.consoleOutput) as ListView
-        txtInput = root.findViewById(R.id.txtInput)
-        btHistory = root.findViewById(R.id.btHistory)
-        btRun = root.findViewById(R.id.btRun)
+        consoleOutputView = root.findViewById(R.id.console_output) as ListView
+        txtInput = root.findViewById(R.id.txt_input)
+        btHistory = root.findViewById(R.id.bt_history)
+        btRun = root.findViewById(R.id.bt_run)
 
         // Register the output list.
         consoleAdapter = ConsoleListAdapter(context as Context)
@@ -84,44 +84,40 @@ class ConsoleFragment : Fragment() {
 
         // Register the history button.
         disableHistoryButton()
-        btHistory.setOnClickListener(object : View.OnClickListener {
-            override fun onClick(view: View) {
-                val history: List<String> = scriptEngineHandler.commandHistory
-                val command: String = history[currentHistoryIndex--]
-                txtInput.text = command
-                // Disable the button once we've reached the bottom of the history stack.
-                determineHistoryButtonState()
-            }
-        })
+        btHistory.setOnClickListener {
+            val history: List<String> = scriptEngineHandler.commandHistory
+            val command: String = history[currentHistoryIndex--]
+            txtInput.text = command
+            // Disable the button once we've reached the bottom of the history stack.
+            determineHistoryButtonState()
+        }
 
         // Register the run button.
         disableRunButton()
-        btRun.setOnClickListener(object : View.OnClickListener {
-            override fun onClick(view: View) {
-                when (inputStatus) {
-                    INPUT_MODE_COMMAND -> {
-                        val command = "${txtInput.text}"
-                        onCommand(command)
-                        if (scriptEngineHandler.postData(command)) {
-                            currentHistoryIndex = scriptEngineHandler.commandHistory.size - 1
-                        }
-
-                        // Immediately clear and disable the input field (until
-                        // execution completes).
-                        onCommandRun()
+        btRun.setOnClickListener {
+            when (inputStatus) {
+                INPUT_MODE_COMMAND -> {
+                    val command = "${txtInput.text}"
+                    onCommand(command)
+                    if (scriptEngineHandler.postData(command)) {
+                        currentHistoryIndex = scriptEngineHandler.commandHistory.size - 1
                     }
-                    INPUT_MODE_PROMPT -> {
-                        val value = "${txtInput.text}"
-                        onPrintLine(value)
-                        scriptEngineHandler.postData(value)
 
-                        // Immediately clear and disable the input field (until
-                        // execution completes).
-                        onPromptSend()
-                    }
+                    // Immediately clear and disable the input field (until
+                    // execution completes).
+                    onCommandRun()
+                }
+                INPUT_MODE_PROMPT -> {
+                    val value = "${txtInput.text}"
+                    onPrintLine(value)
+                    scriptEngineHandler.postData(value)
+
+                    // Immediately clear and disable the input field (until
+                    // execution completes).
+                    onPromptSend()
                 }
             }
-        })
+        }
 
         // Register the input field.
         enableInputField()

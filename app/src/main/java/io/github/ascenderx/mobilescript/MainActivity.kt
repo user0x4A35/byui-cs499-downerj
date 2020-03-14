@@ -1,5 +1,6 @@
 package io.github.ascenderx.mobilescript
 
+import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
@@ -8,7 +9,10 @@ import android.net.Uri
 import android.os.*
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
+import android.widget.TextView
 import androidx.annotation.RequiresApi
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
@@ -51,14 +55,12 @@ class MainActivity : AppCompatActivity(),
         appBarConfiguration = AppBarConfiguration(setOf(R.id.nav_console), drawerLayout)
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
-        navView.setNavigationItemSelectedListener(object : NavigationView.OnNavigationItemSelectedListener {
-            override fun onNavigationItemSelected(item: MenuItem): Boolean {
-                when (item.itemId) {
-                    R.id.nav_open -> showScriptOpenDialog()
-                }
-                return true
+        navView.setNavigationItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_open -> showScriptOpenDialog()
             }
-        })
+            true
+        }
 
         // Start up the scripting engine.
         val uri: Uri? = intent?.data
@@ -166,25 +168,47 @@ class MainActivity : AppCompatActivity(),
         engine.start()
     }
 
+    private fun showConfirmationDialog(message: String, okCallback: DialogInterface.OnClickListener) {
+        // Confirm the user's decision.
+        val promptView: View = layoutInflater.inflate(R.layout.confirm_prompt, null)
+        val dialogBuilder = AlertDialog.Builder(this)
+            .setView(promptView)
+            .setCancelable(false)
+            .setPositiveButton(R.string.dialog_button_ok, okCallback)
+            .setNegativeButton(R.string.dialog_button_cancel) { dialog, _ -> dialog?.cancel() }
+        val lblMessage: TextView = promptView.findViewById(R.id.lbl_message)
+        lblMessage.text = message
+        val alertDialog: AlertDialog = dialogBuilder.create()
+        alertDialog.show()
+    }
+
     private fun onMenuItemClearConsole() {
-        for (listener: ScriptEventListener in listeners) {
-            listener.onScriptEvent(ScriptEngine.EVENT_CLEAR_CONSOLE)
-        }
+        val message: String = getString(R.string.dialog_message_clear_console)
+        showConfirmationDialog(message, DialogInterface.OnClickListener { _, _ ->
+            for (listener: ScriptEventListener in listeners) {
+                listener.onScriptEvent(ScriptEngine.EVENT_CLEAR_CONSOLE)
+            }
+        })
     }
 
     private fun onMenuItemResetEngine() {
-        for (listener: ScriptEventListener in listeners) {
-            listener.onScriptEvent(ScriptEngine.EVENT_RESTART)
-        }
-        engine.kill()
-        restartScriptEngine(null)
+        val message: String = getString(R.string.dialog_message_reset_engine)
+        showConfirmationDialog(message, DialogInterface.OnClickListener { _, _ ->
+            for (listener: ScriptEventListener in listeners) {
+                listener.onScriptEvent(ScriptEngine.EVENT_RESTART)
+            }
+            engine.kill()
+            restartScriptEngine(null)
+        })
     }
 
     private fun onMenuItemClearHistory() {
-        // Disable the clear history menu item.
-        clearHistoryMenuItem?.isVisible = false
-        engine.clearCommandHistory()
-        engine.sendMessage(ScriptEngine.EVENT_HISTORY_CLEAR)
+        val message: String = getString(R.string.dialog_message_clear_history)
+        showConfirmationDialog(message, DialogInterface.OnClickListener { _, _ ->
+            clearHistoryMenuItem?.isVisible = false
+            engine.clearCommandHistory()
+            engine.sendMessage(ScriptEngine.EVENT_HISTORY_CLEAR)
+        })
     }
 
     @RequiresApi(Build.VERSION_CODES.O)

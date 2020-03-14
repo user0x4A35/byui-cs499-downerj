@@ -1,13 +1,11 @@
 package io.github.ascenderx.mobilescript.ui.console
 
 import android.content.Context
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.BaseAdapter
 import android.widget.TextView
-
 import io.github.ascenderx.mobilescript.R
 
 // See: http://android.amberfog.com/?p=296.
