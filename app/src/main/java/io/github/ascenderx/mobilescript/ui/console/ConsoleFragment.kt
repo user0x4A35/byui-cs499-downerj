@@ -279,6 +279,8 @@ class ConsoleFragment : Fragment() {
         consoleAdapter.addErrorLine(getString(R.string.interrupt_notification))
         setInputMode(INPUT_MODE_COMMAND)
         enableInputField()
+        determineRunButtonState()
+        determineHistoryButtonState()
     }
 
     private fun onSourceLoadError(error: String) {
