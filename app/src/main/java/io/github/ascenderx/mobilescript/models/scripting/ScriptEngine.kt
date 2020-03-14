@@ -32,6 +32,8 @@ class ScriptEngine (private val handler: Handler, private val context: Context) 
         const val STATUS_READY = 0
         const val STATUS_BUSY = 1
         const val STATUS_WAITING = 2
+
+        @Volatile private var sharedCommandHistory: MutableList<String> = mutableListOf()
     }
 
     private val contentResolver: ContentResolver = context.contentResolver
@@ -40,8 +42,9 @@ class ScriptEngine (private val handler: Handler, private val context: Context) 
     private var thread: Thread?
     @Volatile private var userInput: String? = null
     @Volatile private var status: Int = STATUS_READY
-    val commandHistory: MutableList<String> = mutableListOf()
     var currentFileUri: Uri? = null
+    val commandHistory: List<String>
+        get() = sharedCommandHistory
 
     init {
         runnable = ScriptRunnable(this)
@@ -146,7 +149,7 @@ class ScriptEngine (private val handler: Handler, private val context: Context) 
     fun postData(data: String): Boolean {
         when (status) {
             STATUS_READY -> {
-                commandHistory.add(data)
+                sharedCommandHistory.add(data)
                 runnable?.commands?.add(data)
                 return true
             }

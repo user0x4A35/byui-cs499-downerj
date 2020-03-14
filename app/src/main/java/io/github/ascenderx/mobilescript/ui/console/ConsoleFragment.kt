@@ -157,8 +157,10 @@ class ConsoleFragment : Fragment() {
         btRun.isEnabled = true
     }
 
-    private fun determineRunButtonState(text: Editable?) {
-        if (text!!.isNotEmpty()) {
+    private fun determineRunButtonState(text: Editable? = null) {
+        val textField: String = (text ?: txtInput.text).toString()
+
+        if (textField.isNotEmpty()) {
             enableRunButton()
         } else {
             disableRunButton()
@@ -174,7 +176,7 @@ class ConsoleFragment : Fragment() {
     }
 
     private fun determineHistoryButtonState() {
-        if (currentHistoryIndex >= 0) {
+        if (scriptEngineHandler.commandHistory.isNotEmpty() && currentHistoryIndex >= 0) {
             enableHistoryButton()
         } else {
             disableHistoryButton()
@@ -250,8 +252,8 @@ class ConsoleFragment : Fragment() {
         setInputMode(INPUT_MODE_COMMAND)
         consoleAdapter.addErrorLine(getString(R.string.restart_notification))
         enableInputField()
-        disableRunButton()
-        disableHistoryButton()
+        determineRunButtonState()
+        determineHistoryButtonState()
     }
 
     private fun onScriptRun() {
@@ -264,8 +266,8 @@ class ConsoleFragment : Fragment() {
     private fun onScriptEnd() {
         setInputMode(INPUT_MODE_COMMAND)
         enableInputField()
-        disableRunButton()
-        disableHistoryButton()
+        determineRunButtonState()
+        determineHistoryButtonState()
     }
 
     private fun onClear() {
