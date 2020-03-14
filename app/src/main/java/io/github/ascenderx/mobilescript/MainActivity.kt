@@ -30,6 +30,8 @@ class MainActivity : AppCompatActivity(),
 
     private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var navView: NavigationView
+    private var clearHistoryMenuItem: MenuItem? = null
+    private var createShortcutMenuItem: MenuItem? = null
     private lateinit var engine: ScriptEngine
     private val listeners: MutableList<ScriptEventListener> = mutableListOf()
     override val commandHistory: List<String>
@@ -73,15 +75,28 @@ class MainActivity : AppCompatActivity(),
         menuInflater.inflate(R.menu.main, menu)
 
         // Initially hide the shortcut creation menu item.
-        val shortcutMenuItem: MenuItem? = menu.findItem(R.id.action_shortcut)
-        shortcutMenuItem?.isVisible = false
+        createShortcutMenuItem = menu.findItem(R.id.action_create_shortcut)
+        createShortcutMenuItem?.isVisible = false
+
+        // Initially hide the history clear menu item.
+        clearHistoryMenuItem = menu.findItem(R.id.action_clear_history)
+        clearHistoryMenuItem?.isVisible = false
 
         attachScriptEventListener(object : ScriptEventListener {
             override fun onScriptEvent(eventType: Int, data: Any?) {
                 when (eventType) {
                     ScriptEngine.EVENT_SCRIPT_RUN -> {
                         // Disable shortcut creation if phone is too old.
-                        shortcutMenuItem?.isVisible = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                        createShortcutMenuItem?.isVisible =
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                    }
+                    ScriptEngine.EVENT_RESULT -> {
+                        // Enable the clear history menu item.
+                        clearHistoryMenuItem?.isVisible = true
+                    }
+                    ScriptEngine.EVENT_EVALUATE_ERROR -> {
+                        // Enable the clear history menu item.
+                        clearHistoryMenuItem?.isVisible = true
                     }
                 }
             }
@@ -92,18 +107,22 @@ class MainActivity : AppCompatActivity(),
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
-            R.id.action_clear -> {
-                onMenuItemClear()
+            R.id.action_clear_console -> {
+                onMenuItemClearConsole()
                 true
             }
-            R.id.action_reset -> {
-                onMenuItemReset()
+            R.id.action_reset_engine -> {
+                onMenuItemResetEngine()
                 true
             }
-            R.id.action_shortcut -> {
+            R.id.action_create_shortcut -> {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     onMenuItemCreateShortcut()
                 }
+                true
+            }
+            R.id.action_clear_history -> {
+                onMenuItemClearHistory()
                 true
             }
             else -> super.onOptionsItemSelected(item)
@@ -147,18 +166,25 @@ class MainActivity : AppCompatActivity(),
         engine.start()
     }
 
-    private fun onMenuItemClear() {
+    private fun onMenuItemClearConsole() {
         for (listener: ScriptEventListener in listeners) {
-            listener.onScriptEvent(ScriptEngine.EVENT_CLEAR, null)
+            listener.onScriptEvent(ScriptEngine.EVENT_CLEAR_CONSOLE)
         }
     }
 
-    private fun onMenuItemReset() {
+    private fun onMenuItemResetEngine() {
         for (listener: ScriptEventListener in listeners) {
-            listener.onScriptEvent(ScriptEngine.EVENT_RESTART, null)
+            listener.onScriptEvent(ScriptEngine.EVENT_RESTART)
         }
         engine.kill()
         restartScriptEngine(null)
+    }
+
+    private fun onMenuItemClearHistory() {
+        // Disable the clear history menu item.
+        clearHistoryMenuItem?.isVisible = false
+        engine.clearCommandHistory()
+        engine.sendMessage(ScriptEngine.EVENT_HISTORY_CLEAR)
     }
 
     @RequiresApi(Build.VERSION_CODES.O)

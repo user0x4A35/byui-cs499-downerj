@@ -46,15 +46,16 @@ class ConsoleFragment : Fragment() {
                         ScriptEngine.EVENT_PRINT -> onPrint(text)
                         ScriptEngine.EVENT_PRINT_LINE -> onPrintLine(text)
                         ScriptEngine.EVENT_PROMPT -> onPrompt(text)
-                        ScriptEngine.EVENT_CLEAR -> onClear()
+                        ScriptEngine.EVENT_CLEAR_CONSOLE -> onClear()
                         ScriptEngine.EVENT_EVALUATE_ERROR -> onError(text)
                         ScriptEngine.EVENT_RESULT -> onResult(text)
                         ScriptEngine.EVENT_SCRIPT_RUN -> onScriptRun()
                         ScriptEngine.EVENT_SCRIPT_END -> onScriptEnd()
                         ScriptEngine.EVENT_RESTART -> onRestart()
-                        ScriptEngine.EVENT_INTERRUPT -> onInterrupt()
+                        ScriptEngine.EVENT_INTERRUPTED -> onInterrupt()
                         ScriptEngine.EVENT_SOURCE_LOAD_ERROR -> onSourceLoadError(text)
                         ScriptEngine.EVENT_SHORTCUT_CREATED -> onShortcutCreated(text)
+                        ScriptEngine.EVENT_HISTORY_CLEAR -> onHistoryClear()
                     }
                 }
             })
@@ -286,5 +287,11 @@ class ConsoleFragment : Fragment() {
 
     private fun onShortcutCreated(uriPath: String) {
         consoleAdapter.addErrorLine(getString(R.string.shortcut_notification))
+    }
+
+    private fun onHistoryClear() {
+        currentHistoryIndex = -1
+        disableHistoryButton()
+        consoleAdapter.addErrorLine(getString(R.string.history_clear_notification))
     }
 }
