@@ -54,7 +54,7 @@ class ConsoleFragment : Fragment() {
                         ScriptEngine.EVENT_RESTART -> onRestart()
                         ScriptEngine.EVENT_INTERRUPTED -> onInterrupt()
                         ScriptEngine.EVENT_SOURCE_LOAD_ERROR -> onSourceLoadError(text)
-                        ScriptEngine.EVENT_SHORTCUT_CREATED -> onShortcutCreated(text)
+                        ScriptEngine.EVENT_SHORTCUT_CREATED -> onShortcutCreated()
                         ScriptEngine.EVENT_HISTORY_CLEAR -> onHistoryClear()
                     }
                 }
@@ -287,7 +287,7 @@ class ConsoleFragment : Fragment() {
         consoleAdapter.addErrorLine(error)
     }
 
-    private fun onShortcutCreated(uriPath: String) {
+    private fun onShortcutCreated() {
         consoleAdapter.addErrorLine(getString(R.string.shortcut_notification))
     }
 
