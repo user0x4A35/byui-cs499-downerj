@@ -199,7 +199,7 @@ class ConsoleFragment : Fragment() {
     }
 
     private fun onInitialized() {
-        consoleAdapter.addErrorLine(getString(R.string.console_ready))
+        consoleAdapter.addCommandLine(getString(R.string.console_ready))
     }
 
     private fun onCommand(command: String) {
@@ -251,14 +251,14 @@ class ConsoleFragment : Fragment() {
 
     private fun onRestart() {
         setInputMode(INPUT_MODE_COMMAND)
-        consoleAdapter.addErrorLine(getString(R.string.restart_notification))
+        consoleAdapter.addCommandLine(getString(R.string.restart_notification))
         enableInputField()
         determineRunButtonState()
         determineHistoryButtonState()
     }
 
     private fun onScriptRun() {
-        consoleAdapter.addErrorLine(getString(R.string.restart_notification))
+        consoleAdapter.addCommandLine(getString(R.string.restart_notification))
         disableInputField()
         disableRunButton()
         disableHistoryButton()
@@ -276,7 +276,7 @@ class ConsoleFragment : Fragment() {
     }
 
     private fun onInterrupt() {
-        consoleAdapter.addErrorLine(getString(R.string.interrupt_notification))
+        consoleAdapter.addCommandLine(getString(R.string.interrupt_notification))
         setInputMode(INPUT_MODE_COMMAND)
         enableInputField()
         determineRunButtonState()
@@ -288,12 +288,12 @@ class ConsoleFragment : Fragment() {
     }
 
     private fun onShortcutCreated() {
-        consoleAdapter.addErrorLine(getString(R.string.shortcut_notification))
+        consoleAdapter.addCommandLine(getString(R.string.shortcut_notification))
     }
 
     private fun onHistoryClear() {
         currentHistoryIndex = -1
         disableHistoryButton()
-        consoleAdapter.addErrorLine(getString(R.string.history_clear_notification))
+        consoleAdapter.addCommandLine(getString(R.string.history_clear_notification))
     }
 }
