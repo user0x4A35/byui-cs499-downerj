@@ -4,10 +4,10 @@
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     android:orientation="vertical"
-    android:padding="10dp">
+    android:padding="20dp">
 
     <TextView
-        android:id="@+id/lbl_message"
+        android:id="@+id/lbl_confirm_message"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textAppearance="?android:attr/textAppearanceLarge"

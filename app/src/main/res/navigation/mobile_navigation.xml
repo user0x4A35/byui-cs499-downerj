@@ -3,12 +3,16 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/mobile_navigation"
-    app:startDestination="@+id/nav_console">
+    app:startDestination="@id/nav_console">
 
     <fragment
         android:id="@+id/nav_console"
         android:name="io.github.ascenderx.mobilescript.ui.console.ConsoleFragment"
         android:label="@string/menu_console"
-        tools:layout="@layout/fragment_console">
-    </fragment>
+        tools:layout="@layout/fragment_console"/>
+    <fragment
+        android:id="@+id/nav_shortcut"
+        android:name="io.github.ascenderx.mobilescript.ShortcutFragment"
+        android:label="fragment_shortcut"
+        tools:layout="@layout/fragment_shortcut" />
 </navigation>

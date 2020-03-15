@@ -2,16 +2,15 @@ package io.github.ascenderx.mobilescript
 
 import android.content.DialogInterface
 import android.content.Intent
-import android.content.pm.ShortcutInfo
-import android.content.pm.ShortcutManager
-import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.*
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.widget.EditText
 import android.widget.TextView
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
@@ -22,6 +21,7 @@ import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import com.google.android.material.navigation.NavigationView
+import io.github.ascenderx.mobilescript.models.data.StringReference
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEngine
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEngineHandler
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventListener
@@ -52,19 +52,37 @@ class MainActivity : AppCompatActivity(),
         val navController = findNavController(R.id.nav_host_fragment)
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.
-        appBarConfiguration = AppBarConfiguration(setOf(R.id.nav_console), drawerLayout)
+        appBarConfiguration = AppBarConfiguration(setOf(
+            R.id.nav_console, R.id.nav_shortcut
+        ), drawerLayout)
+//        appBarConfiguration = AppBarConfiguration(navController.graph, drawerLayout)
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
         navView.setNavigationItemSelectedListener { item ->
-            when (item.itemId) {
-                R.id.nav_open -> showScriptOpenDialog()
-            }
+            onMenuItemClick(item)
+            drawerLayout.closeDrawers()
             true
         }
 
         // Start up the scripting engine.
         val uri: Uri? = intent?.data
         restartScriptEngine(uri)
+    }
+
+    private fun onMenuItemClick(item: MenuItem) {
+        when (item.itemId) {
+            R.id.nav_open_file -> {
+                showScriptOpenDialog()
+            }
+            R.id.nav_view_console -> {
+                findNavController(R.id.nav_host_fragment)
+                    .navigate(R.id.nav_console)
+            }
+            R.id.nav_goto_shortcuts -> {
+                findNavController(R.id.nav_host_fragment)
+                    .navigate(R.id.nav_shortcut)
+            }
+        }
     }
 
     override fun onDestroy() {
@@ -118,9 +136,7 @@ class MainActivity : AppCompatActivity(),
                 true
             }
             R.id.action_create_shortcut -> {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    onMenuItemCreateShortcut()
-                }
+                onMenuItemCreateShortcut()
                 true
             }
             R.id.action_clear_history -> {
@@ -169,15 +185,43 @@ class MainActivity : AppCompatActivity(),
     }
 
     private fun showConfirmationDialog(message: String, okCallback: DialogInterface.OnClickListener) {
-        // Confirm the user's decision.
-        val promptView: View = layoutInflater.inflate(R.layout.confirm_prompt, null)
+        val promptView: View = layoutInflater.inflate(R.layout.prompt_confirm, null)
         val dialogBuilder = AlertDialog.Builder(this)
             .setView(promptView)
             .setCancelable(false)
             .setPositiveButton(R.string.dialog_button_ok, okCallback)
             .setNegativeButton(R.string.dialog_button_cancel) { dialog, _ -> dialog?.cancel() }
-        val lblMessage: TextView = promptView.findViewById(R.id.lbl_message)
+        val lblMessage: TextView = promptView.findViewById(R.id.lbl_confirm_message)
         lblMessage.text = message
+        val alertDialog: AlertDialog = dialogBuilder.create()
+        alertDialog.show()
+    }
+
+    private fun showInputDialog(
+        message: String,
+        hint: String,
+        inputString: StringReference,
+        okCallback: DialogInterface.OnClickListener
+    ) {
+        val promptView: View = layoutInflater.inflate(R.layout.prompt_input, null)
+        val dialogBuilder = AlertDialog.Builder(this)
+            .setView(promptView)
+            .setCancelable(false)
+            .setPositiveButton(R.string.dialog_button_ok, okCallback)
+            .setNegativeButton(R.string.dialog_button_cancel) { dialog, _ -> dialog?.cancel() }
+        val lblMessage: TextView = promptView.findViewById(R.id.lbl_input_message)
+        lblMessage.text = message
+        val txtInput: EditText = promptView.findViewById(R.id.txt_input_prompt)
+        txtInput.hint = hint
+        txtInput.addTextChangedListener(object : TextWatcher {
+            // TODO: Find an efficient way to modify the incoming string reference without
+            //  using a custom StringReference class.
+            override fun afterTextChanged(text: Editable?) {
+                inputString.value = text?.toString() ?: inputString.value
+            }
+            override fun beforeTextChanged(text: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(text: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
         val alertDialog: AlertDialog = dialogBuilder.create()
         alertDialog.show()
     }
@@ -211,34 +255,47 @@ class MainActivity : AppCompatActivity(),
         })
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     private fun onMenuItemCreateShortcut() {
-        val shortcutManager: ShortcutManager? = getSystemService(ShortcutManager::class.java)
-        if (shortcutManager!!.isRequestPinShortcutSupported) {
-            if (engine.currentFileUri == null) {
-                return
-            }
-
-            val uri: Uri = engine.currentFileUri as Uri
-            val intent = Intent(
-                Intent.ACTION_MAIN,
-                uri,
-                this,
-                MainActivity::class.java
-            )
-            intent.type = "*/*"
-            intent.data = uri
-            intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
-            intent.`package` = "io.github.ascenderx.mobilescript"
-            // TODO: Create fragment to let user customize shortcut label.
-            val pinShortcutInfo: ShortcutInfo = ShortcutInfo.Builder(this, "scriptShortcut")
-                .setIcon(Icon.createWithResource(this, R.drawable.ic_script))
-                .setShortLabel(uri.toString())
-                .setIntent(intent)
-                .build()
-            shortcutManager.requestPinShortcut(pinShortcutInfo, null)
-        }
+        val message: String = getString(R.string.dialog_message_create_shortcut)
+        val hint: String = getString(R.string.shortcut_name_hint)
+        val inputString = StringReference()
+        showInputDialog(message, hint, inputString, DialogInterface.OnClickListener { _, _ ->
+            val destination = ShortcutFragment()
+            val transaction = supportFragmentManager.beginTransaction()
+            transaction.replace(R.id.nav_host_fragment, destination)
+            transaction.addToBackStack(null)
+            transaction.commit()
+        })
     }
+
+//    @RequiresApi(Build.VERSION_CODES.O)
+//    private fun onMenuItemCreateShortcut() {
+//        val shortcutManager: ShortcutManager? = getSystemService(ShortcutManager::class.java)
+//        if (shortcutManager!!.isRequestPinShortcutSupported) {
+//            if (engine.currentFileUri == null) {
+//                return
+//            }
+//
+//            val uri: Uri = engine.currentFileUri as Uri
+//            val intent = Intent(
+//                Intent.ACTION_MAIN,
+//                uri,
+//                this,
+//                MainActivity::class.java
+//            )
+//            intent.type = "*/*"
+//            intent.data = uri
+//            intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+//            intent.`package` = "io.github.ascenderx.mobilescript"
+//            // TODO: Create fragment to let user customize shortcut label.
+//            val pinShortcutInfo: ShortcutInfo = ShortcutInfo.Builder(this, "scriptShortcut")
+//                .setIcon(Icon.createWithResource(this, R.drawable.ic_script))
+//                .setShortLabel(uri.toString())
+//                .setIntent(intent)
+//                .build()
+//            shortcutManager.requestPinShortcut(pinShortcutInfo, null)
+//        }
+//    }
 
     override fun postData(data: String): Boolean = engine.postData(data)
 
