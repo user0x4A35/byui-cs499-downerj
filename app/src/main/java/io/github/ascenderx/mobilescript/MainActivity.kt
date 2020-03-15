@@ -268,35 +268,6 @@ class MainActivity : AppCompatActivity(),
         })
     }
 
-//    @RequiresApi(Build.VERSION_CODES.O)
-//    private fun onMenuItemCreateShortcut() {
-//        val shortcutManager: ShortcutManager? = getSystemService(ShortcutManager::class.java)
-//        if (shortcutManager!!.isRequestPinShortcutSupported) {
-//            if (engine.currentFileUri == null) {
-//                return
-//            }
-//
-//            val uri: Uri = engine.currentFileUri as Uri
-//            val intent = Intent(
-//                Intent.ACTION_MAIN,
-//                uri,
-//                this,
-//                MainActivity::class.java
-//            )
-//            intent.type = "*/*"
-//            intent.data = uri
-//            intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
-//            intent.`package` = "io.github.ascenderx.mobilescript"
-//            // TODO: Create fragment to let user customize shortcut label.
-//            val pinShortcutInfo: ShortcutInfo = ShortcutInfo.Builder(this, "scriptShortcut")
-//                .setIcon(Icon.createWithResource(this, R.drawable.ic_script))
-//                .setShortLabel(uri.toString())
-//                .setIntent(intent)
-//                .build()
-//            shortcutManager.requestPinShortcut(pinShortcutInfo, null)
-//        }
-//    }
-
     override fun postData(data: String): Boolean = engine.postData(data)
 
     override fun attachScriptEventListener(listener: ScriptEventListener) {
