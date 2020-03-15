@@ -36,6 +36,7 @@ class MainActivity : AppCompatActivity(),
     private lateinit var navView: NavigationView
     private var clearHistoryMenuItem: MenuItem? = null
     private var createShortcutMenuItem: MenuItem? = null
+    private var stopEngineMenuItem: MenuItem? = null
     private lateinit var engine: ScriptEngine
     private val listeners: MutableList<ScriptEventListener> = mutableListOf()
     override val commandHistory: List<String>
@@ -102,6 +103,10 @@ class MainActivity : AppCompatActivity(),
         clearHistoryMenuItem = menu.findItem(R.id.action_clear_history)
         clearHistoryMenuItem?.isVisible = false
 
+        // Initially hide the stop engine menu item.
+        stopEngineMenuItem = menu.findItem(R.id.action_stop_engine)
+        stopEngineMenuItem?.isVisible = false
+
         attachScriptEventListener(object : ScriptEventListener {
             override fun onScriptEvent(eventType: Int, data: Any?) {
                 when (eventType) {
@@ -109,42 +114,44 @@ class MainActivity : AppCompatActivity(),
                         // Disable shortcut creation if phone is too old.
                         createShortcutMenuItem?.isVisible =
                             Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                        stopEngineMenuItem?.isVisible = true
                     }
                     ScriptEngine.EVENT_RESULT -> {
-                        // Enable the clear history menu item.
                         clearHistoryMenuItem?.isVisible = true
+                        stopEngineMenuItem?.isVisible = false
                     }
                     ScriptEngine.EVENT_EVALUATE_ERROR -> {
-                        // Enable the clear history menu item.
                         clearHistoryMenuItem?.isVisible = true
+                        stopEngineMenuItem?.isVisible = false
                     }
                 }
             }
         })
-
         return true
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
+        when (item.itemId) {
             R.id.action_clear_console -> {
                 onMenuItemClearConsole()
-                true
+            }
+            R.id.action_stop_engine -> {
+                onMenuItemStopEngine()
             }
             R.id.action_reset_engine -> {
                 onMenuItemResetEngine()
-                true
             }
             R.id.action_create_shortcut -> {
                 onMenuItemCreateShortcut()
-                true
             }
             R.id.action_clear_history -> {
                 onMenuItemClearHistory()
-                true
             }
-            else -> super.onOptionsItemSelected(item)
+            else -> {
+                return super.onOptionsItemSelected(item)
+            }
         }
+        return true
     }
 
     override fun onSupportNavigateUp(): Boolean {
@@ -244,6 +251,8 @@ class MainActivity : AppCompatActivity(),
             engine.kill()
             restartScriptEngine(null)
         })
+        stopEngineMenuItem?.isVisible = false
+        createShortcutMenuItem?.isVisible = false
     }
 
     private fun onMenuItemClearHistory() {
@@ -268,13 +277,26 @@ class MainActivity : AppCompatActivity(),
         })
     }
 
-    override fun postData(data: String): Boolean = engine.postData(data)
+    private fun onMenuItemStopEngine() {
+        val message: String = getString(R.string.dialog_message_stop_engine)
+        showConfirmationDialog(message, DialogInterface.OnClickListener { _, _ ->
+            engine.interrupt()
+            stopEngineMenuItem?.isVisible = false
+        })
+    }
+
+    override fun postData(data: String): Boolean {
+        stopEngineMenuItem?.isVisible = true
+        return engine.postData(data)
+    }
 
     override fun attachScriptEventListener(listener: ScriptEventListener) {
         listeners.add(listener)
     }
 
     override fun onBackPressed() {
-        engine.interrupt()
+        if (engine.isBusy) {
+            onMenuItemStopEngine()
+        }
     }
 }

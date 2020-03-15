@@ -29,10 +29,10 @@ class ScriptEngine (private val handler: Handler, private val context: Context) 
         const val EVENT_SHORTCUT_CREATED = 10
         const val EVENT_HISTORY_CLEAR = 11
 
-        const val STATUS_INTERRUPTED = -1
-        const val STATUS_READY = 0
-        const val STATUS_BUSY = 1
-        const val STATUS_WAITING = 2
+        private const val STATUS_INTERRUPTED = -1
+        private const val STATUS_READY = 0
+        private const val STATUS_BUSY = 1
+        private const val STATUS_WAITING = 2
 
         @Volatile private var sharedCommandHistory: MutableList<String> = mutableListOf()
     }
@@ -43,6 +43,8 @@ class ScriptEngine (private val handler: Handler, private val context: Context) 
     private var thread: Thread?
     @Volatile private var userInput: String? = null
     @Volatile private var status: Int = STATUS_READY
+    val isBusy: Boolean
+        get() = status != STATUS_READY
     var currentFileUri: Uri? = null
     val commandHistory: List<String>
         get() = sharedCommandHistory
