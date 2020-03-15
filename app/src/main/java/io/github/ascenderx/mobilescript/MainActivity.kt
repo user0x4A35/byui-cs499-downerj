@@ -25,6 +25,7 @@ import io.github.ascenderx.mobilescript.models.data.StringReference
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEngine
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEngineHandler
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventListener
+import io.github.ascenderx.mobilescript.ui.console.ConsoleListAdapter
 
 class MainActivity : AppCompatActivity(),
     ScriptEngineHandler {
@@ -38,9 +39,12 @@ class MainActivity : AppCompatActivity(),
     private var createShortcutMenuItem: MenuItem? = null
     private var stopEngineMenuItem: MenuItem? = null
     private lateinit var engine: ScriptEngine
-    private val listeners: MutableList<ScriptEventListener> = mutableListOf()
+    private val listeners: MutableMap<String, ScriptEventListener> = mutableMapOf()
     override val commandHistory: List<String>
         get() = engine.commandHistory
+    override var consoleListAdapter: ConsoleListAdapter? = null
+    override val isEngineBusy: Boolean
+        get() = engine.isBusy
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -107,7 +111,7 @@ class MainActivity : AppCompatActivity(),
         stopEngineMenuItem = menu.findItem(R.id.action_stop_engine)
         stopEngineMenuItem?.isVisible = false
 
-        attachScriptEventListener(object : ScriptEventListener {
+        attachScriptEventListener("MS.Main.onScript", object : ScriptEventListener {
             override fun onScriptEvent(eventType: Int, data: Any?) {
                 when (eventType) {
                     ScriptEngine.EVENT_SCRIPT_RUN -> {
@@ -179,7 +183,7 @@ class MainActivity : AppCompatActivity(),
     private fun restartScriptEngine(fileUri: Uri?) {
         engine = ScriptEngine(object : Handler(Looper.getMainLooper()) {
             override fun handleMessage(msg: Message) {
-                for (listener in listeners) {
+                for ((_, listener) in listeners) {
                     listener.onScriptEvent(msg.what, msg.obj)
                 }
             }
@@ -236,7 +240,7 @@ class MainActivity : AppCompatActivity(),
     private fun onMenuItemClearConsole() {
         val message: String = getString(R.string.dialog_message_clear_console)
         showConfirmationDialog(message, DialogInterface.OnClickListener { _, _ ->
-            for (listener: ScriptEventListener in listeners) {
+            for ((_, listener) in listeners) {
                 listener.onScriptEvent(ScriptEngine.EVENT_CLEAR_CONSOLE)
             }
         })
@@ -245,7 +249,7 @@ class MainActivity : AppCompatActivity(),
     private fun onMenuItemResetEngine() {
         val message: String = getString(R.string.dialog_message_reset_engine)
         showConfirmationDialog(message, DialogInterface.OnClickListener { _, _ ->
-            for (listener: ScriptEventListener in listeners) {
+            for ((_, listener) in listeners) {
                 listener.onScriptEvent(ScriptEngine.EVENT_RESTART)
             }
             engine.kill()
@@ -290,8 +294,10 @@ class MainActivity : AppCompatActivity(),
         return engine.postData(data)
     }
 
-    override fun attachScriptEventListener(listener: ScriptEventListener) {
-        listeners.add(listener)
+    override fun attachScriptEventListener(id: String, listener: ScriptEventListener) {
+        if (id !in listeners) {
+            listeners[id] = listener
+        }
     }
 
     override fun onBackPressed() {

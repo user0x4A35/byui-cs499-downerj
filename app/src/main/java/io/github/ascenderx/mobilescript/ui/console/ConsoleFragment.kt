@@ -24,7 +24,6 @@ class ConsoleFragment : Fragment() {
     }
 
     private lateinit var consoleViewModel: ConsoleViewModel
-    private lateinit var consoleAdapter: ConsoleListAdapter
     private lateinit var consoleOutputView: ListView
     private lateinit var txtInput: TextView
     private lateinit var btHistory: Button
@@ -38,7 +37,7 @@ class ConsoleFragment : Fragment() {
 
         if (context is ScriptEngineHandler) {
             this.scriptEngineHandler = context
-            context.attachScriptEventListener(object : ScriptEventListener {
+            context.attachScriptEventListener("MS.Console.onScript", object : ScriptEventListener {
                 override fun onScriptEvent(eventType: Int, data: Any?) {
                     val text: String = (data ?: "undefined").toString()
                     when (eventType) {
@@ -79,11 +78,14 @@ class ConsoleFragment : Fragment() {
         btRun = root.findViewById(R.id.bt_run)
 
         // Register the output list.
-        consoleAdapter = ConsoleListAdapter(context as Context)
-        consoleOutputView.adapter = consoleAdapter
+        if (scriptEngineHandler.consoleListAdapter == null) {
+            scriptEngineHandler.consoleListAdapter = ConsoleListAdapter(context as Context)
+        }
+        consoleOutputView.adapter = scriptEngineHandler.consoleListAdapter
 
         // Register the history button.
-        disableHistoryButton()
+        currentHistoryIndex = scriptEngineHandler.commandHistory.size - 1
+        determineHistoryButtonState()
         btHistory.setOnClickListener {
             val history: List<String> = scriptEngineHandler.commandHistory
             val command: String = history[currentHistoryIndex--]
@@ -93,7 +95,7 @@ class ConsoleFragment : Fragment() {
         }
 
         // Register the run button.
-        disableRunButton()
+        determineRunButtonState()
         btRun.setOnClickListener {
             when (inputStatus) {
                 INPUT_MODE_COMMAND -> {
@@ -157,10 +159,22 @@ class ConsoleFragment : Fragment() {
     private fun determineRunButtonState(text: Editable? = null) {
         val textField: String = (text ?: txtInput.text).toString()
 
-        if (textField.isNotEmpty()) {
+        if (textField.isNotEmpty() && !scriptEngineHandler.isEngineBusy) {
             enableRunButton()
         } else {
             disableRunButton()
+        }
+    }
+
+    private fun determineHistoryButtonState() {
+        if (
+            scriptEngineHandler.commandHistory.isNotEmpty() &&
+            currentHistoryIndex >= 0 &&
+            !scriptEngineHandler.isEngineBusy
+        ) {
+            enableHistoryButton()
+        } else {
+            disableHistoryButton()
         }
     }
 
@@ -170,14 +184,6 @@ class ConsoleFragment : Fragment() {
 
     private fun enableHistoryButton() {
         btHistory.isEnabled = true
-    }
-
-    private fun determineHistoryButtonState() {
-        if (scriptEngineHandler.commandHistory.isNotEmpty() && currentHistoryIndex >= 0) {
-            enableHistoryButton()
-        } else {
-            disableHistoryButton()
-        }
     }
 
     private fun setInputMode(mode: Int) {
@@ -195,11 +201,11 @@ class ConsoleFragment : Fragment() {
     }
 
     private fun onInitialized() {
-        consoleAdapter.addCommandLine(getString(R.string.console_ready))
+        scriptEngineHandler.consoleListAdapter?.addCommandLine(getString(R.string.console_ready))
     }
 
     private fun onCommand(command: String) {
-        consoleAdapter.addCommandLine("-> $command")
+        scriptEngineHandler.consoleListAdapter?.addCommandLine("-> $command")
     }
 
     private fun onCommandRun() {
@@ -210,16 +216,16 @@ class ConsoleFragment : Fragment() {
     }
 
     private fun onPrint(text: String) {
-        consoleAdapter.addOutput(text)
+        scriptEngineHandler.consoleListAdapter?.addOutput(text)
     }
 
     private fun onPrintLine(text: String) {
-        consoleAdapter.addOutputAndEndLine(text)
+        scriptEngineHandler.consoleListAdapter?.addOutputAndEndLine(text)
     }
 
     private fun onPrompt(prompt: String) {
         setInputMode(INPUT_MODE_PROMPT)
-        consoleAdapter.addOutput("?> $prompt")
+        scriptEngineHandler.consoleListAdapter?.addOutput("?> $prompt")
         enableInputField()
         enableRunButton()
     }
@@ -233,28 +239,28 @@ class ConsoleFragment : Fragment() {
 
     private fun onError(error: String) {
         setInputMode(INPUT_MODE_COMMAND)
-        consoleAdapter.addErrorLine(error)
+        scriptEngineHandler.consoleListAdapter?.addErrorLine(error)
         enableInputField()
         enableHistoryButton()
     }
 
     private fun onResult(result: String) {
         setInputMode(INPUT_MODE_COMMAND)
-        consoleAdapter.addResultLine("<= $result")
+        scriptEngineHandler.consoleListAdapter?.addResultLine("<= $result")
         enableInputField()
         enableHistoryButton()
     }
 
     private fun onRestart() {
         setInputMode(INPUT_MODE_COMMAND)
-        consoleAdapter.addCommandLine(getString(R.string.restart_notification))
+        scriptEngineHandler.consoleListAdapter?.addCommandLine(getString(R.string.restart_notification))
         enableInputField()
         determineRunButtonState()
         determineHistoryButtonState()
     }
 
     private fun onScriptRun() {
-        consoleAdapter.addCommandLine(getString(R.string.restart_notification))
+        scriptEngineHandler.consoleListAdapter?.addCommandLine(getString(R.string.restart_notification))
         disableInputField()
         disableRunButton()
         disableHistoryButton()
@@ -268,11 +274,11 @@ class ConsoleFragment : Fragment() {
     }
 
     private fun onClear() {
-        consoleAdapter.clear()
+        scriptEngineHandler.consoleListAdapter?.clear()
     }
 
     private fun onInterrupt() {
-        consoleAdapter.addCommandLine(getString(R.string.interrupt_notification))
+        scriptEngineHandler.consoleListAdapter?.addCommandLine(getString(R.string.interrupt_notification))
         setInputMode(INPUT_MODE_COMMAND)
         enableInputField()
         determineRunButtonState()
@@ -280,16 +286,16 @@ class ConsoleFragment : Fragment() {
     }
 
     private fun onSourceLoadError(error: String) {
-        consoleAdapter.addErrorLine(error)
+        scriptEngineHandler.consoleListAdapter?.addErrorLine(error)
     }
 
     private fun onShortcutCreated() {
-        consoleAdapter.addCommandLine(getString(R.string.shortcut_notification))
+        scriptEngineHandler.consoleListAdapter?.addCommandLine(getString(R.string.shortcut_notification))
     }
 
     private fun onHistoryClear() {
         currentHistoryIndex = -1
         disableHistoryButton()
-        consoleAdapter.addCommandLine(getString(R.string.history_clear_notification))
+        scriptEngineHandler.consoleListAdapter?.addCommandLine(getString(R.string.history_clear_notification))
     }
 }
