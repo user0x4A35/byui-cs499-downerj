@@ -21,17 +21,20 @@ class ScriptEngine (private val handler: Handler, private val context: Context) 
         const val EVENT_PRINT = 2
         const val EVENT_PRINT_LINE = 3
         const val EVENT_PROMPT = 4
-        const val EVENT_CLEAR = 5
+        const val EVENT_CLEAR_CONSOLE = 5
         const val EVENT_RESTART = 6
         const val EVENT_SCRIPT_RUN = 7
         const val EVENT_SCRIPT_END = 8
-        const val EVENT_INTERRUPT = 9
+        const val EVENT_INTERRUPTED = 9
         const val EVENT_SHORTCUT_CREATED = 10
+        const val EVENT_HISTORY_CLEAR = 11
 
-        const val STATUS_INTERRUPTED = -1
-        const val STATUS_READY = 0
-        const val STATUS_BUSY = 1
-        const val STATUS_WAITING = 2
+        private const val STATUS_INTERRUPTED = -1
+        private const val STATUS_READY = 0
+        private const val STATUS_BUSY = 1
+        private const val STATUS_WAITING = 2
+
+        @Volatile private var sharedCommandHistory: MutableList<String> = mutableListOf()
     }
 
     private val contentResolver: ContentResolver = context.contentResolver
@@ -40,8 +43,11 @@ class ScriptEngine (private val handler: Handler, private val context: Context) 
     private var thread: Thread?
     @Volatile private var userInput: String? = null
     @Volatile private var status: Int = STATUS_READY
-    val commandHistory: MutableList<String> = mutableListOf()
+    val isBusy: Boolean
+        get() = status != STATUS_READY
     var currentFileUri: Uri? = null
+    val commandHistory: List<String>
+        get() = sharedCommandHistory
 
     init {
         runnable = ScriptRunnable(this)
@@ -139,14 +145,14 @@ class ScriptEngine (private val handler: Handler, private val context: Context) 
         // Run an empty command to "clear" any errors from the runtime.
         runnable?.commands?.add("")
 
-        sendMessage(EVENT_INTERRUPT, null)
+        sendMessage(EVENT_INTERRUPTED)
         status = STATUS_READY
     }
 
     fun postData(data: String): Boolean {
         when (status) {
             STATUS_READY -> {
-                commandHistory.add(data)
+                sharedCommandHistory.add(data)
                 runnable?.commands?.add(data)
                 return true
             }
@@ -158,9 +164,13 @@ class ScriptEngine (private val handler: Handler, private val context: Context) 
         return false
     }
 
-    fun sendMessage(what: Int, data: String?) {
+    fun sendMessage(what: Int, data: String? = null) {
         val message = handler.obtainMessage(what, data)
         handler.sendMessage(message)
+    }
+
+    fun clearCommandHistory() {
+        sharedCommandHistory.clear()
     }
 
     private class ScriptRunnable(private val engine: ScriptEngine) : Runnable {
@@ -179,7 +189,7 @@ class ScriptEngine (private val handler: Handler, private val context: Context) 
                 if (!isSource) {
                     engine.sendMessage(EVENT_RESULT, result)
                 } else {
-                    engine.sendMessage(EVENT_SCRIPT_END, null)
+                    engine.sendMessage(EVENT_SCRIPT_END)
                 }
             } catch (ex: Exception) {
                 val error: String = ex.message ?: ""
@@ -195,7 +205,7 @@ class ScriptEngine (private val handler: Handler, private val context: Context) 
             for (source in sources) {
                 executeCommand(source, true)
             }
-            engine.sendMessage(EVENT_INITIALIZED, null)
+            engine.sendMessage(EVENT_INITIALIZED)
             engine.status = STATUS_READY
 
             while (running) {
@@ -254,7 +264,7 @@ class ScriptEngine (private val handler: Handler, private val context: Context) 
 
         class ClearCallback(private val engine: ScriptEngine) : JavaVoidCallback {
             override fun invoke(receiver: V8Object?, parameters: V8Array?) {
-                engine.sendMessage(EVENT_CLEAR, null)
+                engine.sendMessage(EVENT_CLEAR_CONSOLE)
             }
         }
 

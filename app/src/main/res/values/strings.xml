@@ -7,25 +7,38 @@
     <string name="nav_header_desc">Navigation header</string>
 
     <string name="action_settings">Settings</string>
-    <string name="action_clear">Clear console</string>
-    <string name="action_reset">Reset engine</string>
-    <string name="action_shortcut">Create shortcut</string>
+    <string name="action_clear_console">Clear console</string>
+    <string name="action_stop_engine">Stop execution</string>
+    <string name="action_reset_engine">Reset engine</string>
+    <string name="action_clear_history">Clear history</string>
+    <string name="action_create_shortcut">Create shortcut</string>
 
     <string name="menu_console">Console</string>
     <string name="menu_canvas">Canvas</string>
-    <string name="menu_open">Open&#8230;</string>
+    <string name="menu_open_shortcut">Open saved&#8230;</string>
+    <string name="menu_open">Open file&#8230;</string>
     <string name="menu_settings">Settings</string>
+
+    <string name="dialog_message_clear_history">Clear history?</string>
+    <string name="dialog_message_reset_engine">Reset engine?</string>
+    <string name="dialog_message_clear_console">Clear console?</string>
+    <string name="dialog_message_stop_engine">Stop execution?</string>
+    <string name="dialog_message_create_shortcut">Create shortcut</string>
+    <string name="dialog_button_ok">OK</string>
+    <string name="dialog_button_cancel">Cancel</string>
 
     <string name="console_ready">Ready.</string>
     <string name="input_hint">Enter command&#8230;</string>
     <string name="running_hint">Running&#8230;</string>
     <string name="prompt_hint">Enter value&#8230;</string>
+    <string name="shortcut_name_hint">Name your shortcut&#8230;</string>
     <string name="history_button">&#x25B2;</string>
     <string name="run_button">Run</string>
     <string name="prompt_return_button">Send</string>
     <string name="restart_notification">&lt;==== Engine restarted ====&gt;</string>
     <string name="interrupt_notification">&lt;==== Engine interrupted ====&gt;</string>
     <string name="shortcut_notification">&lt;==== Shortcut created ====&gt;</string>
+    <string name="history_clear_notification">&lt;==== History cleared ====&gt;</string>
 
     <string name="message_error_user_source">Error loading user source:</string>
     <string name="message_error_asset_source">Error loading asset source:</string>

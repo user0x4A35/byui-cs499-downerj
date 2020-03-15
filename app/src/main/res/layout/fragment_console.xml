@@ -5,7 +5,7 @@
     android:layout_height="match_parent">
 
     <ListView
-        android:id="@+id/consoleOutput"
+        android:id="@+id/console_output"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:textSize="14sp"
@@ -13,13 +13,13 @@
         android:dividerHeight="0dp"
         android:stackFromBottom="true"
         android:transcriptMode="alwaysScroll"
-        app:layout_constraintBottom_toTopOf="@+id/txtInput"
+        app:layout_constraintBottom_toTopOf="@+id/txt_input"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <EditText
-        android:id="@+id/txtInput"
+        android:id="@+id/txt_input"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:ems="10"
@@ -30,20 +30,20 @@
         android:focusable="true"
         android:focusableInTouchMode="true"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/btHistory"
+        app:layout_constraintEnd_toStartOf="@+id/bt_history"
         app:layout_constraintStart_toStartOf="parent" />
 
     <Button
-        android:id="@+id/btHistory"
+        android:id="@+id/bt_history"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:minWidth="0dp"
         android:text="@string/history_button"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/btRun" />
+        app:layout_constraintEnd_toStartOf="@+id/bt_run" />
 
     <Button
-        android:id="@+id/btRun"
+        android:id="@+id/bt_run"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:minWidth="0dp"
