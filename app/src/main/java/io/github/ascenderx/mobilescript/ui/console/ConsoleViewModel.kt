@@ -4,7 +4,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 
 class ConsoleViewModel : ViewModel() {
-    var liveData = MutableLiveData<MutableList<ConsoleOutputRow>>()
+    val liveData = MutableLiveData<MutableList<ConsoleOutputRow>>()
     private val data: MutableList<ConsoleOutputRow> = mutableListOf()
 
     private fun update() {

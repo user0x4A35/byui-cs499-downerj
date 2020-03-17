@@ -25,8 +25,8 @@ class ConsoleFragment : Fragment() {
         const val EVENT_LISTENER_TAG = "MS.Console.onScript"
     }
 
-    private val consoleViewModel: ConsoleViewModel by activityViewModels()
-    private lateinit var consoleOutputView: ListView
+    private val viewModel: ConsoleViewModel by activityViewModels()
+    private lateinit var outputView: ListView
     private lateinit var txtInput: TextView
     private lateinit var btHistory: Button
     private lateinit var btRun: Button
@@ -75,19 +75,22 @@ class ConsoleFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         // Render the fragment.
-        val root = inflater.inflate(R.layout.fragment_console, container, false)
+        val root: View? = inflater.inflate(
+            R.layout.fragment_console,
+            container, false
+        )
 
         // Get components by ID.
-        consoleOutputView = root.findViewById(R.id.console_output) as ListView
+        outputView = root?.findViewById(R.id.console_output) as ListView
         txtInput = root.findViewById(R.id.txt_input)
         btHistory = root.findViewById(R.id.bt_history)
         btRun = root.findViewById(R.id.bt_run)
 
         // Register the output list.
-        val consoleListAdapter = ConsoleListAdapter(inflater)
-        consoleOutputView.adapter = consoleListAdapter
-        consoleViewModel.liveData.observe(viewLifecycleOwner, Observer {
-            consoleListAdapter.data = it
+        val listAdapter = ConsoleListAdapter(inflater)
+        outputView.adapter = listAdapter
+        viewModel.liveData.observe(viewLifecycleOwner, Observer {
+            listAdapter.data = it
         })
 
         // Register the history button.
@@ -207,14 +210,14 @@ class ConsoleFragment : Fragment() {
     }
 
     private fun onInitialized() {
-        consoleViewModel.addCommandLine(getString(R.string.console_ready))
+        viewModel.addCommandLine(getString(R.string.console_ready))
         enableInputField()
         determineHistoryButtonState()
         determineRunButtonState()
     }
 
     private fun onCommand(command: String) {
-        consoleViewModel.addCommandLine("-> $command")
+        viewModel.addCommandLine("-> $command")
     }
 
     private fun onCommandRun() {
@@ -225,16 +228,16 @@ class ConsoleFragment : Fragment() {
     }
 
     private fun onPrint(text: String) {
-        consoleViewModel.addOutput(text)
+        viewModel.addOutput(text)
     }
 
     private fun onPrintLine(text: String) {
-        consoleViewModel.addOutputAndEndLine(text)
+        viewModel.addOutputAndEndLine(text)
     }
 
     private fun onPrompt(prompt: String) {
         setInputMode(INPUT_MODE_PROMPT)
-        consoleViewModel.addOutput("?> $prompt")
+        viewModel.addOutput("?> $prompt")
         enableInputField()
         enableRunButton()
     }
@@ -248,28 +251,28 @@ class ConsoleFragment : Fragment() {
 
     private fun onError(error: String) {
         setInputMode(INPUT_MODE_COMMAND)
-        consoleViewModel.addErrorLine(error)
+        viewModel.addErrorLine(error)
         enableInputField()
         enableHistoryButton()
     }
 
     private fun onResult(result: String) {
         setInputMode(INPUT_MODE_COMMAND)
-        consoleViewModel.addResultLine("<= $result")
+        viewModel.addResultLine("<= $result")
         enableInputField()
         enableHistoryButton()
     }
 
     private fun onRestart() {
         setInputMode(INPUT_MODE_COMMAND)
-        consoleViewModel.addCommandLine(getString(R.string.restart_notification))
+        viewModel.addCommandLine(getString(R.string.restart_notification))
         enableInputField()
         determineRunButtonState()
         determineHistoryButtonState()
     }
 
     private fun onScriptRun() {
-        consoleViewModel.addCommandLine(getString(R.string.restart_notification))
+        viewModel.addCommandLine(getString(R.string.restart_notification))
         disableInputField()
         disableRunButton()
         disableHistoryButton()
@@ -283,11 +286,11 @@ class ConsoleFragment : Fragment() {
     }
 
     private fun onClear() {
-        consoleViewModel.clear()
+        viewModel.clear()
     }
 
     private fun onInterrupt() {
-        consoleViewModel.addCommandLine(getString(R.string.interrupt_notification))
+        viewModel.addCommandLine(getString(R.string.interrupt_notification))
         setInputMode(INPUT_MODE_COMMAND)
         enableInputField()
         determineRunButtonState()
@@ -295,15 +298,15 @@ class ConsoleFragment : Fragment() {
     }
 
     private fun onSourceLoadError(error: String) {
-        consoleViewModel.addErrorLine(error)
+        viewModel.addErrorLine(error)
     }
 
     private fun onShortcutCreated() {
-        consoleViewModel.addCommandLine(getString(R.string.shortcut_notification))
+        viewModel.addCommandLine(getString(R.string.shortcut_notification))
     }
 
     private fun onHistoryClear() {
-        consoleViewModel.addCommandLine(getString(R.string.history_clear_notification))
+        viewModel.addCommandLine(getString(R.string.history_clear_notification))
         currentHistoryIndex = -1
         disableHistoryButton()
     }

@@ -1,34 +1,54 @@
 package io.github.ascenderx.mobilescript.ui.shortcuts
 
-import androidx.lifecycle.ViewModelProviders
+import android.content.res.Resources
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
+import android.os.Build
 import android.os.Bundle
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.GridView
+import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Observer
 import io.github.ascenderx.mobilescript.R
 
 
 class ShortcutFragment : Fragment() {
-
-    companion object {
-        fun newInstance() =
-            ShortcutFragment()
-    }
-
-    private lateinit var viewModel: ShortcutViewModel
+    private val viewModel: ShortcutViewModel by activityViewModels()
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
+        inflater: LayoutInflater,
+        container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        return inflater.inflate(R.layout.fragment_shortcut, container, false)
+        val root: View? = inflater.inflate(
+            R.layout.fragment_shortcut,
+            container,
+            false
+        )
+
+        val shortcutGrid: GridView = root?.findViewById(R.id.shortcut_grid) as GridView
+        val icon: Drawable? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            resources.getDrawable(R.drawable.ic_script_grey, null)
+        } else {
+            resources.getDrawable(R.drawable.ic_script_grey)
+        }
+        val gridAdapter = ShortcutListAdapter(inflater, icon)
+        shortcutGrid.adapter = gridAdapter
+        viewModel.liveData.observe(viewLifecycleOwner, Observer {
+            gridAdapter.data = it
+        })
+
+        return root
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
-        viewModel = ViewModelProviders.of(this).get(ShortcutViewModel::class.java)
-        // TODO: Use the ViewModel
+        viewModel.addShortcut("Noob", null)
     }
 
 }
