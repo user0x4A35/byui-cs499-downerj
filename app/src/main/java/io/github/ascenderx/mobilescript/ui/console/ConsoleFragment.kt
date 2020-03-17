@@ -92,6 +92,7 @@ class ConsoleFragment : Fragment() {
 
         // Register the history button.
         currentHistoryIndex = scriptEngineHandler.commandHistory.size - 1
+        determineHistoryButtonState()
         btHistory.setOnClickListener {
             val history: List<String> = scriptEngineHandler.commandHistory
             val command: String = history[currentHistoryIndex--]
@@ -101,6 +102,7 @@ class ConsoleFragment : Fragment() {
         }
 
         // Register the run button.
+        determineRunButtonState()
         btRun.setOnClickListener {
             when (inputStatus) {
                 INPUT_MODE_COMMAND -> {
