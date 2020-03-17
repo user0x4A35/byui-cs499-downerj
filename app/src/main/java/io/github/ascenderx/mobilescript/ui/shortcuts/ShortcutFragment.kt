@@ -1,4 +1,4 @@
-package io.github.ascenderx.mobilescript
+package io.github.ascenderx.mobilescript.ui.shortcuts
 
 import androidx.lifecycle.ViewModelProviders
 import android.os.Bundle
@@ -6,12 +6,14 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import io.github.ascenderx.mobilescript.R
 
 
 class ShortcutFragment : Fragment() {
 
     companion object {
-        fun newInstance() = ShortcutFragment()
+        fun newInstance() =
+            ShortcutFragment()
     }
 
     private lateinit var viewModel: ShortcutViewModel
