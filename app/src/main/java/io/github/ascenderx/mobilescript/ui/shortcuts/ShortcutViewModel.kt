@@ -1,4 +1,4 @@
-package io.github.ascenderx.mobilescript
+package io.github.ascenderx.mobilescript.ui.shortcuts
 
 import androidx.lifecycle.ViewModel
 

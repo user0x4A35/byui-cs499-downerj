@@ -15,6 +15,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
+import androidx.navigation.NavController
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
@@ -25,7 +26,7 @@ import io.github.ascenderx.mobilescript.models.data.StringReference
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEngine
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEngineHandler
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventListener
-import io.github.ascenderx.mobilescript.ui.console.ConsoleListAdapter
+import io.github.ascenderx.mobilescript.ui.shortcuts.ShortcutFragment
 
 class MainActivity : AppCompatActivity(),
     ScriptEngineHandler {
@@ -42,52 +43,64 @@ class MainActivity : AppCompatActivity(),
     private val listeners: MutableMap<String, ScriptEventListener> = mutableMapOf()
     override val commandHistory: List<String>
         get() = engine.commandHistory
-    override var consoleListAdapter: ConsoleListAdapter? = null
     override val isEngineBusy: Boolean
         get() = engine.isBusy
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        // Setup the UI.
+        setupToolbar()
+        setupDrawer()
+
+        // Start up the scripting engine.
+        restartScriptEngine(intent?.data)
+    }
+
+    private fun setupToolbar() {
         val toolbar: Toolbar = findViewById(R.id.toolbar)
         setSupportActionBar(toolbar)
+    }
 
+    private fun setupDrawer() {
         val drawerLayout: DrawerLayout = findViewById(R.id.drawer_layout)
         navView = findViewById(R.id.nav_view)
         val navController = findNavController(R.id.nav_host_fragment)
+        val navMenu: Menu = navView.menu
+        val itemConsole: MenuItem? = navMenu.findItem(R.id.nav_view_console)
+        val itemShortcuts: MenuItem? = navMenu.findItem(R.id.nav_goto_shortcuts)
+
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.
         appBarConfiguration = AppBarConfiguration(setOf(
             R.id.nav_console, R.id.nav_shortcut
         ), drawerLayout)
-//        appBarConfiguration = AppBarConfiguration(navController.graph, drawerLayout)
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
         navView.setNavigationItemSelectedListener { item ->
-            onMenuItemClick(item)
+            when (item.itemId) {
+                R.id.nav_open_file -> {
+                    showScriptOpenDialog()
+                }
+                R.id.nav_view_console -> {
+                    navController.navigate(R.id.nav_console)
+                    itemConsole?.isVisible = false
+                    itemShortcuts?.isVisible = true
+                }
+                R.id.nav_goto_shortcuts -> {
+                    navController.navigate(R.id.nav_shortcut)
+                    itemConsole?.isVisible = true
+                    itemShortcuts?.isVisible = false
+                }
+            }
             drawerLayout.closeDrawers()
             true
         }
-
-        // Start up the scripting engine.
-        val uri: Uri? = intent?.data
-        restartScriptEngine(uri)
-    }
-
-    private fun onMenuItemClick(item: MenuItem) {
-        when (item.itemId) {
-            R.id.nav_open_file -> {
-                showScriptOpenDialog()
-            }
-            R.id.nav_view_console -> {
-                findNavController(R.id.nav_host_fragment)
-                    .navigate(R.id.nav_console)
-            }
-            R.id.nav_goto_shortcuts -> {
-                findNavController(R.id.nav_host_fragment)
-                    .navigate(R.id.nav_shortcut)
-            }
-        }
+        // Initializing in the console, so hide its menu item and reveal the other top-level
+        // destination items.
+        itemConsole?.isVisible = false
+        itemShortcuts?.isVisible = true
     }
 
     override fun onDestroy() {
@@ -273,7 +286,8 @@ class MainActivity : AppCompatActivity(),
         val hint: String = getString(R.string.shortcut_name_hint)
         val inputString = StringReference()
         showInputDialog(message, hint, inputString, DialogInterface.OnClickListener { _, _ ->
-            val destination = ShortcutFragment()
+            val destination =
+                ShortcutFragment()
             val transaction = supportFragmentManager.beginTransaction()
             transaction.replace(R.id.nav_host_fragment, destination)
             transaction.addToBackStack(null)
@@ -295,8 +309,14 @@ class MainActivity : AppCompatActivity(),
     }
 
     override fun attachScriptEventListener(id: String, listener: ScriptEventListener) {
-        if (id !in listeners) {
+        if (!listeners.containsKey(id)) {
             listeners[id] = listener
+        }
+    }
+
+    override fun detachScriptEventListener(id: String) {
+        if (listeners.containsKey(id)) {
+            listeners.remove(id)
         }
     }
 

@@ -12,7 +12,7 @@
         tools:layout="@layout/fragment_console"/>
     <fragment
         android:id="@+id/nav_shortcut"
-        android:name="io.github.ascenderx.mobilescript.ShortcutFragment"
+        android:name="io.github.ascenderx.mobilescript.ui.shortcuts.ShortcutFragment"
         android:label="@string/menu_open_shortcut"
         tools:layout="@layout/fragment_shortcut" />
 </navigation>
