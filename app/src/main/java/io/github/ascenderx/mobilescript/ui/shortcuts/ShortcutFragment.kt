@@ -32,12 +32,7 @@ class ShortcutFragment : Fragment() {
         )
 
         val shortcutGrid: GridView = root?.findViewById(R.id.shortcut_grid) as GridView
-        val icon: Drawable? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            resources.getDrawable(R.drawable.ic_script_grey, null)
-        } else {
-            resources.getDrawable(R.drawable.ic_script_grey)
-        }
-        val gridAdapter = ShortcutListAdapter(inflater, icon)
+        val gridAdapter = ShortcutListAdapter(inflater)
         shortcutGrid.adapter = gridAdapter
         viewModel.liveData.observe(viewLifecycleOwner, Observer {
             gridAdapter.data = it

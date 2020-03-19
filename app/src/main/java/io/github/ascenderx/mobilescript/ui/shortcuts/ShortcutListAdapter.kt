@@ -1,14 +1,14 @@
 package io.github.ascenderx.mobilescript.ui.shortcuts
 
-import android.graphics.drawable.Drawable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.BaseAdapter
 import android.widget.ImageView
+import android.widget.TextView
 import io.github.ascenderx.mobilescript.R
 
-class ShortcutListAdapter(private val inflater: LayoutInflater, private val icon: Drawable?) :
+class ShortcutListAdapter(private val inflater: LayoutInflater) :
     BaseAdapter() {
     var data: MutableList<ShortcutCell>? = null
         set(value) {
@@ -29,15 +29,13 @@ class ShortcutListAdapter(private val inflater: LayoutInflater, private val icon
     }
 
     override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
-        var view: ImageView? = convertView as ImageView?
-
-        if (view == null) {
-            view = inflater.inflate(R.layout.shortcut_cell, null) as ImageView
-        }
+        val view: View = convertView ?:
+            inflater.inflate(R.layout.shortcut_cell, null) as View
 
         val item: ShortcutCell? = getItem(position)
         if (item != null) {
-            view.setImageDrawable(icon)
+            val txtShortcutCaption: TextView = view.findViewById(R.id.txt_shortcut_caption)
+            txtShortcutCaption.text = getItem(position)?.title
         }
 
         return view
