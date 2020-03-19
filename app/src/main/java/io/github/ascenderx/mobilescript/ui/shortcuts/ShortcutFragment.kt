@@ -1,11 +1,5 @@
 package io.github.ascenderx.mobilescript.ui.shortcuts
 
-import android.content.res.Resources
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.Drawable
-import android.os.Build
 import android.os.Bundle
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
@@ -15,7 +9,6 @@ import android.widget.GridView
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
 import io.github.ascenderx.mobilescript.R
-
 
 class ShortcutFragment : Fragment() {
     private val viewModel: ShortcutViewModel by activityViewModels()
@@ -43,7 +36,11 @@ class ShortcutFragment : Fragment() {
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
-        viewModel.addShortcut("Noob", null)
+        viewModel.addShortcut("AAAA", null)
+        viewModel.addShortcut("BBBB", null)
+        viewModel.addShortcut("CCCC", null)
+        viewModel.addShortcut("DDDD", null)
+        viewModel.addShortcut("EEEE", null)
     }
 
 }
