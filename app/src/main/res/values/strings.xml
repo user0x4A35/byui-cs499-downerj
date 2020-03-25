@@ -45,4 +45,6 @@
     <string name="message_error_content_open">Content stream failed to open</string>
 
     <string name="dir_assets_sources">sources</string>
+    <string name="id_pref_shortcuts">shortcuts</string>
+    <string name="key_pref_uri_map">uriMap</string>
 </resources>

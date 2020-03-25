@@ -1,5 +1,6 @@
 package io.github.ascenderx.mobilescript.ui.console
 
+import android.app.Activity
 import android.content.Context
 import android.os.Bundle
 import android.text.Editable
@@ -17,55 +18,48 @@ import io.github.ascenderx.mobilescript.R
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEngine
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEngineHandler
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventListener
+import io.github.ascenderx.mobilescript.ui.dialog.ConfirmationDialog
+import io.github.ascenderx.mobilescript.ui.dialog.TextInputDialog
+import io.github.ascenderx.mobilescript.ui.menu.MenuEventListener
+import io.github.ascenderx.mobilescript.ui.menu.MenuHandler
 
-class ConsoleFragment : Fragment() {
+class ConsoleFragment : Fragment(),
+    ScriptEventListener,
+    MenuEventListener {
     companion object {
         private const val INPUT_MODE_COMMAND = 0
         private const val INPUT_MODE_PROMPT = 1
-        const val EVENT_LISTENER_TAG = "MS.Console.onScript"
     }
 
-    private val consoleViewModel: ConsoleViewModel by activityViewModels()
-    private lateinit var consoleOutputView: ListView
+    private val viewModel: ConsoleViewModel by activityViewModels()
+    private lateinit var activity: Activity
+    private lateinit var scriptEngineHandler: ScriptEngineHandler
+    private lateinit var menuHandler: MenuHandler
+    private lateinit var outputView: ListView
     private lateinit var txtInput: TextView
     private lateinit var btHistory: Button
     private lateinit var btRun: Button
-    private lateinit var scriptEngineHandler: ScriptEngineHandler
     private var currentHistoryIndex: Int = -1
     private var inputStatus: Int = INPUT_MODE_COMMAND
 
     override fun onAttach(context: Context) {
         if (context is ScriptEngineHandler) {
-            this.scriptEngineHandler = context
-            this.scriptEngineHandler.attachScriptEventListener(
-                EVENT_LISTENER_TAG,
-                object : ScriptEventListener {
-                override fun onScriptEvent(eventType: Int, data: Any?) {
-                    val text: String = (data ?: "undefined").toString()
-                    when (eventType) {
-                        ScriptEngine.EVENT_INITIALIZED -> onInitialized()
-                        ScriptEngine.EVENT_PRINT -> onPrint(text)
-                        ScriptEngine.EVENT_PRINT_LINE -> onPrintLine(text)
-                        ScriptEngine.EVENT_PROMPT -> onPrompt(text)
-                        ScriptEngine.EVENT_CLEAR_CONSOLE -> onClear()
-                        ScriptEngine.EVENT_EVALUATE_ERROR -> onError(text)
-                        ScriptEngine.EVENT_RESULT -> onResult(text)
-                        ScriptEngine.EVENT_SCRIPT_RUN -> onScriptRun()
-                        ScriptEngine.EVENT_SCRIPT_END -> onScriptEnd()
-                        ScriptEngine.EVENT_RESTART -> onRestart()
-                        ScriptEngine.EVENT_INTERRUPTED -> onInterrupt()
-                        ScriptEngine.EVENT_SOURCE_LOAD_ERROR -> onSourceLoadError(text)
-                        ScriptEngine.EVENT_SHORTCUT_CREATED -> onShortcutCreated()
-                        ScriptEngine.EVENT_HISTORY_CLEAR -> onHistoryClear()
-                    }
-                }
-            })
+            scriptEngineHandler = context
+            scriptEngineHandler.attachScriptEventListener(this)
+        }
+        if (context is Activity) {
+            activity = context
+        }
+        if (context is MenuHandler) {
+            menuHandler = context
+            menuHandler.attachMenuEventListener(this)
         }
         super.onAttach(context)
     }
 
     override fun onStop() {
-        this.scriptEngineHandler.detachScriptEventListener(EVENT_LISTENER_TAG)
+        this.scriptEngineHandler.detachScriptEventListener()
+        this.menuHandler.detachMenuEventListener()
         super.onStop()
     }
 
@@ -75,30 +69,55 @@ class ConsoleFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         // Render the fragment.
-        val root = inflater.inflate(R.layout.fragment_console, container, false)
+        val root: View? = inflater.inflate(
+            R.layout.fragment_console,
+            container, false
+        )
 
         // Get components by ID.
-        consoleOutputView = root.findViewById(R.id.console_output) as ListView
-        txtInput = root.findViewById(R.id.txt_input)
-        btHistory = root.findViewById(R.id.bt_history)
-        btRun = root.findViewById(R.id.bt_run)
+        outputView = root?.findViewById(R.id.console_output) as ListView
+        txtInput = root.findViewById(R.id.txt_input) as TextView
+        btHistory = root.findViewById(R.id.bt_history) as Button
+        btRun = root.findViewById(R.id.bt_run) as Button
 
+        registerUIElements(inflater)
+
+        return root
+    }
+
+    override fun getVisibleOptionItems(): List<Int>? {
+        val optionItems: MutableList<Int> = mutableListOf()
+        if (viewModel.isNotEmpty) {
+            optionItems.add(R.id.action_clear_console)
+        }
+        if (scriptEngineHandler.commandHistory.isNotEmpty()) {
+            optionItems.add(R.id.action_clear_history)
+        }
+        if (scriptEngineHandler.isEngineBusy) {
+            optionItems.add(R.id.action_stop_engine)
+        }
+        // TODO: Check if engine can be restarted.
+        // TODO: Check if user script is loaded.
+        return optionItems
+    }
+
+    private fun registerUIElements(inflater: LayoutInflater) {
         // Register the output list.
-        val consoleListAdapter = ConsoleListAdapter(inflater)
-        consoleOutputView.adapter = consoleListAdapter
-        consoleViewModel.liveData.observe(viewLifecycleOwner, Observer {
-            consoleListAdapter.data = it
+        val listAdapter = ConsoleListAdapter(inflater)
+        outputView.adapter = listAdapter
+        viewModel.liveData.observe(viewLifecycleOwner, Observer {
+            listAdapter.data = it
         })
 
         // Register the history button.
         currentHistoryIndex = scriptEngineHandler.commandHistory.size - 1
-        determineHistoryButtonState()
+        determineHistoryButtonAndOptionState()
         btHistory.setOnClickListener {
             val history: List<String> = scriptEngineHandler.commandHistory
             val command: String = history[currentHistoryIndex--]
             txtInput.text = command
             // Disable the button once we've reached the bottom of the history stack.
-            determineHistoryButtonState()
+            determineHistoryButtonAndOptionState()
         }
 
         // Register the run button.
@@ -107,89 +126,118 @@ class ConsoleFragment : Fragment() {
             when (inputStatus) {
                 INPUT_MODE_COMMAND -> {
                     val command = "${txtInput.text}"
-                    onCommand(command)
-                    if (scriptEngineHandler.postData(command)) {
-                        currentHistoryIndex = scriptEngineHandler.commandHistory.size - 1
-                    }
-
-                    // Immediately clear and disable the input field (until
-                    // execution completes).
-                    onCommandRun()
+                    onCommandRun(command)
                 }
                 INPUT_MODE_PROMPT -> {
                     val value = "${txtInput.text}"
-                    onPrintLine(value)
-                    scriptEngineHandler.postData(value)
-
-                    // Immediately clear and disable the input field (until
-                    // execution completes).
-                    onPromptSend()
+                    onPromptSend(value)
                 }
             }
         }
 
         // Register the input field.
         txtInput.addTextChangedListener(object : TextWatcher {
-            override fun afterTextChanged(text: Editable?) {
-                if (text != null) {
-                    determineRunButtonState(text)
-                }
-            }
+            override fun afterTextChanged(text: Editable?) = determineRunButtonState(text)
             override fun beforeTextChanged(text: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(text: CharSequence?, start: Int, before: Int, count: Int) {}
         })
-
-        return root
     }
 
-    private fun enableInputField() {
-        txtInput.isEnabled = true
+    override fun onScriptEvent(eventType: Int, data: Any?) {
+        val text: String = (data ?: "undefined").toString()
+        when (eventType) {
+            ScriptEngine.EVENT_INITIALIZED -> onInitialized()
+            ScriptEngine.EVENT_PRINT -> onPrint(text)
+            ScriptEngine.EVENT_PRINT_LINE -> onPrintLine(text)
+            ScriptEngine.EVENT_PROMPT -> onPrompt(text)
+            ScriptEngine.EVENT_EVALUATE_ERROR -> onError(text)
+            ScriptEngine.EVENT_RESULT -> onResult(text)
+            ScriptEngine.EVENT_SCRIPT_RUN -> onScriptRun()
+            ScriptEngine.EVENT_SCRIPT_END -> onScriptEnd()
+            ScriptEngine.EVENT_SOURCE_LOAD_ERROR -> onSourceLoadError(text)
+        }
     }
 
-    private fun disableInputField() {
-        txtInput.isEnabled = false
+    override fun onOptionItemEvent(id: Int) {
+        when (id) {
+            // TODO: Determine menu item states.
+            R.id.action_stop_engine -> onMenuItemStopEngine()
+            R.id.action_reset_engine -> onMenuItemResetEngine()
+            R.id.action_clear_console -> onMenuItemClearConsole()
+            R.id.action_clear_history -> onMenuItemClearHistory()
+            R.id.action_create_shortcut -> onMenuItemCreateShortcut()
+        }
+    }
+
+    private fun onMenuItemClearConsole() {
+        val dialog = ConfirmationDialog()
+        dialog.message = getString(R.string.dialog_message_clear_console)
+        dialog.okListener = object : ConfirmationDialog.OnOKListener {
+            override fun onOK() = onClearConsole()
+        }
+        dialog.show(activity, layoutInflater)
+    }
+
+    private fun onMenuItemResetEngine() {
+        val dialog = ConfirmationDialog()
+        dialog.message = getString(R.string.dialog_message_reset_engine)
+        dialog.okListener = object : ConfirmationDialog.OnOKListener {
+            override fun onOK() = onRestartEngine()
+        }
+        dialog.show(activity, layoutInflater)
+    }
+
+    private fun onMenuItemClearHistory() {
+        val dialog = ConfirmationDialog()
+        dialog.message = getString(R.string.dialog_message_clear_history)
+        dialog.okListener = object : ConfirmationDialog.OnOKListener {
+            override fun onOK() = onClearHistory()
+        }
+        dialog.show(activity, layoutInflater)
+    }
+
+    private fun onMenuItemCreateShortcut() {
+        val dialog = TextInputDialog()
+        dialog.message = getString(R.string.dialog_message_create_shortcut)
+        dialog.hint = getString(R.string.shortcut_name_hint)
+        dialog.okListener = object : TextInputDialog.OnOKListener {
+            override fun onOK(returnValue: String?) = onCreateShortcut(returnValue)
+        }
+        dialog.show(activity, layoutInflater)
+    }
+
+    private fun onMenuItemStopEngine() {
+        val dialog = ConfirmationDialog()
+        dialog.message = getString(R.string.dialog_message_stop_engine)
+        dialog.okListener = object : ConfirmationDialog.OnOKListener {
+            override fun onOK() = onInterrupt()
+        }
+        dialog.show(activity, layoutInflater)
     }
 
     private fun clearInputField() {
         txtInput.text = ""
     }
 
-    private fun disableRunButton() {
-        btRun.isEnabled = false
-    }
-
-    private fun enableRunButton() {
-        btRun.isEnabled = true
-    }
-
     private fun determineRunButtonState(text: Editable? = null) {
-        val textField: String = (text ?: txtInput.text).toString()
-
-        if (textField.isNotEmpty() && !scriptEngineHandler.isEngineBusy) {
-            enableRunButton()
-        } else {
-            disableRunButton()
+        if (text == null) {
+            return
         }
+        val textField: String = text.toString()
+        btRun.isEnabled = textField.isNotEmpty() && !scriptEngineHandler.isEngineBusy
     }
 
-    private fun determineHistoryButtonState() {
-        if (
-            scriptEngineHandler.commandHistory.isNotEmpty() &&
-            currentHistoryIndex >= 0 &&
-            !scriptEngineHandler.isEngineBusy
-        ) {
-            enableHistoryButton()
+    private fun determineHistoryButtonAndOptionState() {
+        val shouldEnable: Boolean = scriptEngineHandler.commandHistory.isNotEmpty() &&
+                currentHistoryIndex >= 0 &&
+                !scriptEngineHandler.isEngineBusy
+        if (shouldEnable) {
+            btHistory.isEnabled = true
+            menuHandler.showOptionItem(R.id.action_clear_history)
         } else {
-            disableHistoryButton()
+            btHistory.isEnabled = false
+            menuHandler.hideOptionItem(R.id.action_clear_history)
         }
-    }
-
-    private fun disableHistoryButton() {
-        btHistory.isEnabled = false
-    }
-
-    private fun enableHistoryButton() {
-        btHistory.isEnabled = true
     }
 
     private fun setInputMode(mode: Int) {
@@ -207,104 +255,137 @@ class ConsoleFragment : Fragment() {
     }
 
     private fun onInitialized() {
-        consoleViewModel.addCommandLine(getString(R.string.console_ready))
-        enableInputField()
-        determineHistoryButtonState()
+        viewModel.addCommandLine(getString(R.string.console_ready))
+        txtInput.isEnabled = true
+        determineHistoryButtonAndOptionState()
         determineRunButtonState()
     }
 
-    private fun onCommand(command: String) {
-        consoleViewModel.addCommandLine("-> $command")
-    }
-
-    private fun onCommandRun() {
+    private fun onCommandRun(command: String) {
+        viewModel.addCommandLine("-> $command")
+        if (scriptEngineHandler.postData(command)) {
+            currentHistoryIndex = scriptEngineHandler.commandHistory.size - 1
+        }
+        menuHandler.showOptionItem(R.id.action_clear_console)
+        menuHandler.showOptionItem(R.id.action_stop_engine)
+        menuHandler.showOptionItem(R.id.action_reset_engine)
         clearInputField()
-        disableInputField()
-        disableHistoryButton()
-        disableRunButton()
+        txtInput.isEnabled = false
+        determineHistoryButtonAndOptionState()
+        btRun.isEnabled = false
     }
 
     private fun onPrint(text: String) {
-        consoleViewModel.addOutput(text)
+        viewModel.addOutput(text)
+        menuHandler.showOptionItem(R.id.action_clear_console)
     }
 
     private fun onPrintLine(text: String) {
-        consoleViewModel.addOutputAndEndLine(text)
+        viewModel.addOutputAndEndLine(text)
+        menuHandler.showOptionItem(R.id.action_clear_console)
     }
 
     private fun onPrompt(prompt: String) {
         setInputMode(INPUT_MODE_PROMPT)
-        consoleViewModel.addOutput("?> $prompt")
-        enableInputField()
-        enableRunButton()
+        viewModel.addOutput("?> $prompt")
+        menuHandler.hideOptionItem(R.id.action_clear_console)
+        txtInput.isEnabled = true
+        determineHistoryButtonAndOptionState()
+        btRun.isEnabled = true
     }
 
-    private fun onPromptSend() {
+    private fun onPromptSend(value: String) {
         clearInputField()
-        disableInputField()
-        disableHistoryButton()
-        disableRunButton()
+        onPrintLine(value)
+        scriptEngineHandler.postData(value)
+        menuHandler.showOptionItem(R.id.action_clear_console)
+        txtInput.isEnabled = false
+        determineHistoryButtonAndOptionState()
+        btRun.isEnabled = false
     }
 
     private fun onError(error: String) {
+        menuHandler.showOptionItem(R.id.action_clear_console)
+        menuHandler.hideOptionItem(R.id.action_stop_engine)
         setInputMode(INPUT_MODE_COMMAND)
-        consoleViewModel.addErrorLine(error)
-        enableInputField()
-        enableHistoryButton()
+        determineHistoryButtonAndOptionState()
+        viewModel.addErrorLine(error)
+        txtInput.isEnabled = true
+        determineHistoryButtonAndOptionState()
     }
 
     private fun onResult(result: String) {
+        menuHandler.showOptionItem(R.id.action_clear_console)
+        menuHandler.hideOptionItem(R.id.action_stop_engine)
         setInputMode(INPUT_MODE_COMMAND)
-        consoleViewModel.addResultLine("<= $result")
-        enableInputField()
-        enableHistoryButton()
+        viewModel.addResultLine("<= $result")
+        txtInput.isEnabled = true
+        determineHistoryButtonAndOptionState()
     }
 
-    private fun onRestart() {
+    private fun onRestartEngine() {
+        viewModel.addCommandLine(getString(R.string.restart_notification))
+        scriptEngineHandler.restartScriptEngine()
+        menuHandler.showOptionItem(R.id.action_clear_console)
+        menuHandler.hideOptionItem(R.id.action_stop_engine)
+        menuHandler.hideOptionItem(R.id.action_reset_engine)
         setInputMode(INPUT_MODE_COMMAND)
-        consoleViewModel.addCommandLine(getString(R.string.restart_notification))
-        enableInputField()
+        txtInput.isEnabled = true
         determineRunButtonState()
-        determineHistoryButtonState()
+        determineHistoryButtonAndOptionState()
     }
 
     private fun onScriptRun() {
-        consoleViewModel.addCommandLine(getString(R.string.restart_notification))
-        disableInputField()
-        disableRunButton()
-        disableHistoryButton()
+        viewModel.addCommandLine(getString(R.string.restart_notification))
+        menuHandler.showOptionItem(R.id.action_clear_console)
+        menuHandler.showOptionItem(R.id.action_stop_engine)
+        menuHandler.showOptionItem(R.id.action_reset_engine)
+        txtInput.isEnabled = false
+        btRun.isEnabled = false
+        determineHistoryButtonAndOptionState()
     }
 
     private fun onScriptEnd() {
         setInputMode(INPUT_MODE_COMMAND)
-        enableInputField()
+        menuHandler.hideOptionItem(R.id.action_stop_engine)
+        txtInput.isEnabled = true
         determineRunButtonState()
-        determineHistoryButtonState()
+        determineHistoryButtonAndOptionState()
     }
 
-    private fun onClear() {
-        consoleViewModel.clear()
+    private fun onClearConsole() {
+        viewModel.clear()
+        menuHandler.hideOptionItem(R.id.action_clear_console)
     }
 
     private fun onInterrupt() {
-        consoleViewModel.addCommandLine(getString(R.string.interrupt_notification))
+        viewModel.addCommandLine(getString(R.string.interrupt_notification))
+        scriptEngineHandler.interrupt()
+        menuHandler.showOptionItem(R.id.action_clear_console)
+        menuHandler.hideOptionItem(R.id.action_stop_engine)
         setInputMode(INPUT_MODE_COMMAND)
-        enableInputField()
+        txtInput.isEnabled = true
         determineRunButtonState()
-        determineHistoryButtonState()
+        determineHistoryButtonAndOptionState()
     }
 
     private fun onSourceLoadError(error: String) {
-        consoleViewModel.addErrorLine(error)
+        viewModel.addErrorLine(error)
+        menuHandler.showOptionItem(R.id.action_clear_console)
     }
 
-    private fun onShortcutCreated() {
-        consoleViewModel.addCommandLine(getString(R.string.shortcut_notification))
+    private fun onCreateShortcut(returnValue: String?) {
+        // TODO: Use returnValue.
+        menuHandler.navigateTo(R.id.nav_shortcut)
+        // TODO: Hide the menu option.
     }
 
-    private fun onHistoryClear() {
-        consoleViewModel.addCommandLine(getString(R.string.history_clear_notification))
+    private fun onClearHistory() {
+        viewModel.addCommandLine(getString(R.string.history_clear_notification))
+        scriptEngineHandler.clearCommandHistory()
+        menuHandler.showOptionItem(R.id.action_clear_console)
+        menuHandler.hideOptionItem(R.id.action_clear_history)
         currentHistoryIndex = -1
-        disableHistoryButton()
+        determineHistoryButtonAndOptionState()
     }
 }

@@ -10,9 +10,7 @@ import io.github.ascenderx.mobilescript.R
 
 // See: http://android.amberfog.com/?p=296.
 
-class ConsoleListAdapter(
-    private val inflater: LayoutInflater
-) : BaseAdapter() {
+class ConsoleListAdapter(private val inflater: LayoutInflater) : BaseAdapter() {
     var data: MutableList<ConsoleOutputRow>? = null
         set(value) {
             field = value
