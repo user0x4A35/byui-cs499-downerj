@@ -1,5 +1,8 @@
 package io.github.ascenderx.mobilescript.ui.shortcuts
 
+import android.content.Context
+import android.content.SharedPreferences
+import android.net.Uri
 import android.os.Bundle
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
@@ -9,9 +12,18 @@ import android.widget.GridView
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
 import io.github.ascenderx.mobilescript.R
+import io.github.ascenderx.mobilescript.models.scripting.ScriptEngineHandler
 
 class ShortcutFragment : Fragment() {
     private val viewModel: ShortcutViewModel by activityViewModels()
+
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+
+        if (context is ScriptEngineHandler) {
+            viewModel.initializeData(context.shortcuts)
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -32,15 +44,6 @@ class ShortcutFragment : Fragment() {
         })
 
         return root
-    }
-
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-        viewModel.addShortcut("AAAA", null)
-        viewModel.addShortcut("BBBB", null)
-        viewModel.addShortcut("CCCC", null)
-        viewModel.addShortcut("DDDD", null)
-        viewModel.addShortcut("EEEE", null)
     }
 
 }
