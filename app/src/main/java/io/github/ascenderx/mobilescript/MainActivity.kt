@@ -1,19 +1,12 @@
 package io.github.ascenderx.mobilescript
 
 import android.content.Context
-import android.content.DialogInterface
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
 import android.os.*
-import android.text.Editable
-import android.text.TextWatcher
 import android.view.Menu
 import android.view.MenuItem
-import android.view.View
-import android.widget.EditText
-import android.widget.TextView
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
@@ -28,15 +21,11 @@ import com.google.gson.Gson
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEngine
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEngineHandler
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventListener
-import io.github.ascenderx.mobilescript.ui.dialog.ConfirmationDialog
-import io.github.ascenderx.mobilescript.ui.dialog.DialogHandler
-import io.github.ascenderx.mobilescript.ui.dialog.TextInputDialog
+import io.github.ascenderx.mobilescript.ui.menu.MenuEventListener
 import io.github.ascenderx.mobilescript.ui.menu.MenuHandler
 
 class MainActivity : AppCompatActivity(),
     ScriptEngineHandler,
-    ScriptEventListener,
-    DialogHandler,
     MenuHandler {
     companion object {
         const val REQUEST_GET_CONTENT = 1
@@ -44,12 +33,17 @@ class MainActivity : AppCompatActivity(),
 
     private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var navView: NavigationView
-    private lateinit var menu: Menu
-    private var clearHistoryMenuItem: MenuItem? = null
-    private var createShortcutMenuItem: MenuItem? = null
-    private var stopEngineMenuItem: MenuItem? = null
+    private var menu: Menu? = null
+    private val optionItems: List<Int> = listOf(
+        R.id.action_clear_history,
+        R.id.action_clear_console,
+        R.id.action_create_shortcut,
+        R.id.action_reset_engine,
+        R.id.action_stop_engine
+    )
     private var engine: ScriptEngine? = null
-    private val scriptListeners: MutableMap<String, ScriptEventListener> = mutableMapOf()
+    private var scriptListener: ScriptEventListener? = null
+    private var menuListener: MenuEventListener? = null
     override val commandHistory: List<String>
         get() = engine?.commandHistory ?: listOf()
     override val isEngineBusy: Boolean
@@ -136,44 +130,26 @@ class MainActivity : AppCompatActivity(),
         this.menu = menu
         menuInflater.inflate(R.menu.main, menu)
 
-        // Initially hide the shortcut creation menu item.
-        createShortcutMenuItem = menu.findItem(R.id.action_create_shortcut)
-        createShortcutMenuItem?.isVisible = false
+        for (id in optionItems) {
+            menu.findItem(id)?.isVisible = false
+        }
+        val visibleItems: List<Int>? = menuListener?.getVisibleOptionItems()
+        if (visibleItems != null) {
+            for (id in visibleItems) {
+                menu.findItem(id)?.isVisible = true
+            }
+        }
 
-        // Initially hide the history clear menu item.
-        clearHistoryMenuItem = menu.findItem(R.id.action_clear_history)
-        clearHistoryMenuItem?.isVisible = false
-
-        // Initially hide the stop engine menu item.
-        stopEngineMenuItem = menu.findItem(R.id.action_stop_engine)
-        stopEngineMenuItem?.isVisible = false
-
-        attachScriptEventListener("MS.Main.onScript", this)
         return true
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            R.id.action_clear_console -> {
-                onMenuItemClearConsole()
-            }
-            R.id.action_stop_engine -> {
-                onMenuItemStopEngine()
-            }
-            R.id.action_reset_engine -> {
-                onMenuItemResetEngine()
-            }
-            R.id.action_create_shortcut -> {
-                onMenuItemCreateShortcut()
-            }
-            R.id.action_clear_history -> {
-                onMenuItemClearHistory()
-            }
-            else -> {
-                return super.onOptionsItemSelected(item)
-            }
+        return if (item.itemId in optionItems) {
+            menuListener?.onOptionItemEvent(item.itemId)
+            true
+        } else {
+            super.onOptionsItemSelected(item)
         }
-        return true
     }
 
     override fun onSupportNavigateUp(): Boolean {
@@ -191,24 +167,7 @@ class MainActivity : AppCompatActivity(),
 
     override fun onBackPressed() {
         if (engine!!.isBusy) {
-            onMenuItemStopEngine()
-        }
-    }
-
-    override fun onScriptEvent(eventType: Int, data: Any?) {
-        when (eventType) {
-            ScriptEngine.EVENT_SCRIPT_RUN -> {
-                createShortcutMenuItem?.isVisible = true
-                stopEngineMenuItem?.isVisible = true
-            }
-            ScriptEngine.EVENT_RESULT -> {
-                clearHistoryMenuItem?.isVisible = true
-                stopEngineMenuItem?.isVisible = false
-            }
-            ScriptEngine.EVENT_EVALUATE_ERROR -> {
-                clearHistoryMenuItem?.isVisible = true
-                stopEngineMenuItem?.isVisible = false
-            }
+            menuListener?.onOptionItemEvent(R.id.action_stop_engine)
         }
     }
 
@@ -225,9 +184,7 @@ class MainActivity : AppCompatActivity(),
         engine?.kill()
         engine = ScriptEngine(object : Handler(Looper.getMainLooper()) {
             override fun handleMessage(msg: Message) {
-                for ((_, listener) in scriptListeners) {
-                    listener.onScriptEvent(msg.what, msg.obj)
-                }
+                scriptListener?.onScriptEvent(msg.what, msg.obj)
             }
         }, this)
 
@@ -242,20 +199,23 @@ class MainActivity : AppCompatActivity(),
     }
 
     override fun postData(data: String): Boolean {
-        stopEngineMenuItem?.isVisible = true
         return engine!!.postData(data)
     }
 
-    override fun attachScriptEventListener(id: String, listener: ScriptEventListener) {
-        if (!scriptListeners.containsKey(id)) {
-            scriptListeners[id] = listener
-        }
+    override fun attachScriptEventListener(listener: ScriptEventListener) {
+        scriptListener = listener
     }
 
-    override fun detachScriptEventListener(id: String) {
-        if (scriptListeners.containsKey(id)) {
-            scriptListeners.remove(id)
-        }
+    override fun detachScriptEventListener() {
+        scriptListener = null
+    }
+
+    override fun attachMenuEventListener(listener: MenuEventListener) {
+        menuListener = listener
+    }
+
+    override fun detachMenuEventListener() {
+        menuListener = null
     }
 
     override fun clearCommandHistory() {
@@ -267,12 +227,12 @@ class MainActivity : AppCompatActivity(),
     }
 
     override fun showOptionItem(id: Int) {
-        val item: MenuItem? = menu.findItem(R.id.action_clear_history)
+        val item: MenuItem? = menu?.findItem(id)
         item?.isVisible = true
     }
 
     override fun hideOptionItem(id: Int) {
-        val item: MenuItem? = menu.findItem(R.id.action_clear_history)
+        val item: MenuItem? = menu?.findItem(id)
         item?.isVisible = false
     }
 
