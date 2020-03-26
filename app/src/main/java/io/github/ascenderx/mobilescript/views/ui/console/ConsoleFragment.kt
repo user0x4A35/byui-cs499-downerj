@@ -82,23 +82,21 @@ class ConsoleFragment : Fragment(),
         return root
     }
 
-    override fun getVisibleOptionItems(): List<Int>? {
-        val optionItems: MutableList<Int> = mutableListOf()
+    override fun onCreateOptionMenuEvent() {
         if (viewModel.isNotEmpty) {
-            optionItems.add(R.id.action_clear_console)
+            menuHandler.showOptionItem(R.id.action_clear_console)
         }
         if (scriptEngineHandler.commandHistory.isNotEmpty()) {
-            optionItems.add(R.id.action_clear_history)
+            menuHandler.showOptionItem(R.id.action_clear_history)
         }
         if (scriptEngineHandler.isEngineBusy) {
-            optionItems.add(R.id.action_stop_engine)
+            menuHandler.showOptionItem(R.id.action_stop_engine)
         }
         // TODO: Check if engine can be restarted.
         // TODO: Check if user script is loaded and has already been saved.
         if (scriptEngineHandler.currentFileUri != null) {
-            optionItems.add(R.id.action_create_shortcut)
+            menuHandler.showOptionItem(R.id.action_create_shortcut)
         }
-        return optionItems
     }
 
     private fun registerUIElements(inflater: LayoutInflater) {
@@ -160,7 +158,6 @@ class ConsoleFragment : Fragment(),
 
     override fun onOptionItemEvent(id: Int) {
         when (id) {
-            // TODO: Determine menu item states.
             R.id.action_stop_engine -> onMenuItemStopEngine()
             R.id.action_reset_engine -> onMenuItemResetEngine()
             R.id.action_clear_console -> onMenuItemClearConsole()

@@ -129,12 +129,7 @@ class MainActivity : AppCompatActivity(),
         for (id in optionItems) {
             menu.findItem(id)?.isVisible = false
         }
-        val visibleItems: List<Int>? = menuListener?.getVisibleOptionItems()
-        if (visibleItems != null) {
-            for (id in visibleItems) {
-                menu.findItem(id)?.isVisible = true
-            }
-        }
+        menuListener?.onCreateOptionMenuEvent()
 
         return true
     }
