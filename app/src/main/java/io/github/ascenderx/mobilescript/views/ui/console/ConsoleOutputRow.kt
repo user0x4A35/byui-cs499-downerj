@@ -1,4 +1,4 @@
-package io.github.ascenderx.mobilescript.ui.console
+package io.github.ascenderx.mobilescript.views.ui.console
 
 class ConsoleOutputRow(val type: ConsoleOutputType) {
     private var buffer: StringBuffer? = StringBuffer()

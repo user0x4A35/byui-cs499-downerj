@@ -12,7 +12,7 @@ import java.io.InputStream
 import java.io.InputStreamReader
 import java.util.concurrent.ConcurrentLinkedQueue
 
-class ScriptEngine (private val handler: Handler, private val context: Context) {
+class ScriptEngine(private val handler: Handler, private val context: Context) {
     companion object {
         const val EVENT_SOURCE_LOAD_ERROR = -2
         const val EVENT_EVALUATE_ERROR = -1

@@ -1,4 +1,4 @@
-package io.github.ascenderx.mobilescript.ui.shortcuts
+package io.github.ascenderx.mobilescript.views.ui.shortcuts
 
 import android.net.Uri
 import androidx.lifecycle.MutableLiveData
@@ -12,7 +12,7 @@ class ShortcutViewModel : ViewModel() {
         liveData.value = data
     }
 
-    fun initializeData(data: MutableMap<String, Uri>?) {
+    fun initializeData(data: MutableMap<String, Uri>? = null) {
         if (this.data != null) {
             return
         }
@@ -21,7 +21,9 @@ class ShortcutViewModel : ViewModel() {
     }
 
     fun addShortcut(title: String, uri: Uri) {
-        if (title in data!!) {
+        if (data == null) {
+            initializeData()
+        } else if (title in data!!) {
             return
         }
         data!![title] = uri

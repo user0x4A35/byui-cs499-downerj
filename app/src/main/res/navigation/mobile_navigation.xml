@@ -7,12 +7,12 @@
 
     <fragment
         android:id="@+id/nav_console"
-        android:name="io.github.ascenderx.mobilescript.ui.console.ConsoleFragment"
+        android:name="io.github.ascenderx.mobilescript.views.ui.console.ConsoleFragment"
         android:label="@string/menu_console"
         tools:layout="@layout/fragment_console"/>
     <fragment
         android:id="@+id/nav_shortcut"
-        android:name="io.github.ascenderx.mobilescript.ui.shortcuts.ShortcutFragment"
+        android:name="io.github.ascenderx.mobilescript.views.ui.shortcuts.ShortcutFragment"
         android:label="@string/menu_open_shortcut"
         tools:layout="@layout/fragment_shortcut" />
 </navigation>

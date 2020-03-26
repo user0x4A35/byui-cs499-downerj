@@ -1,4 +1,4 @@
-package io.github.ascenderx.mobilescript.ui.dialog
+package io.github.ascenderx.mobilescript.views.ui.dialog
 
 import android.content.Context
 import android.text.Editable

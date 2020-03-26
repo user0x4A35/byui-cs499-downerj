@@ -1,7 +1,8 @@
-package io.github.ascenderx.mobilescript.ui.console
+package io.github.ascenderx.mobilescript.views.ui.console
 
 import android.app.Activity
 import android.content.Context
+import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -18,10 +19,11 @@ import io.github.ascenderx.mobilescript.R
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEngine
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEngineHandler
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventListener
-import io.github.ascenderx.mobilescript.ui.dialog.ConfirmationDialog
-import io.github.ascenderx.mobilescript.ui.dialog.TextInputDialog
-import io.github.ascenderx.mobilescript.ui.menu.MenuEventListener
-import io.github.ascenderx.mobilescript.ui.menu.MenuHandler
+import io.github.ascenderx.mobilescript.views.ui.dialog.ConfirmationDialog
+import io.github.ascenderx.mobilescript.views.ui.dialog.TextInputDialog
+import io.github.ascenderx.mobilescript.views.ui.menu.MenuEventListener
+import io.github.ascenderx.mobilescript.views.ui.menu.MenuHandler
+import io.github.ascenderx.mobilescript.views.ui.shortcuts.ShortcutViewModel
 
 class ConsoleFragment : Fragment(),
     ScriptEventListener,
@@ -32,6 +34,7 @@ class ConsoleFragment : Fragment(),
     }
 
     private val viewModel: ConsoleViewModel by activityViewModels()
+    private val shortcutViewModel: ShortcutViewModel by activityViewModels()
     private lateinit var activity: Activity
     private lateinit var scriptEngineHandler: ScriptEngineHandler
     private lateinit var menuHandler: MenuHandler
@@ -55,12 +58,6 @@ class ConsoleFragment : Fragment(),
             menuHandler.attachMenuEventListener(this)
         }
         super.onAttach(context)
-    }
-
-    override fun onStop() {
-        this.scriptEngineHandler.detachScriptEventListener()
-        this.menuHandler.detachMenuEventListener()
-        super.onStop()
     }
 
     override fun onCreateView(
@@ -97,7 +94,10 @@ class ConsoleFragment : Fragment(),
             optionItems.add(R.id.action_stop_engine)
         }
         // TODO: Check if engine can be restarted.
-        // TODO: Check if user script is loaded.
+        // TODO: Check if user script is loaded and has already been saved.
+        if (scriptEngineHandler.currentFileUri != null) {
+            optionItems.add(R.id.action_create_shortcut)
+        }
         return optionItems
     }
 
@@ -197,11 +197,17 @@ class ConsoleFragment : Fragment(),
     }
 
     private fun onMenuItemCreateShortcut() {
+        if (scriptEngineHandler.currentFileUri == null) {
+            return
+        }
         val dialog = TextInputDialog()
         dialog.message = getString(R.string.dialog_message_create_shortcut)
         dialog.hint = getString(R.string.shortcut_name_hint)
         dialog.okListener = object : TextInputDialog.OnOKListener {
-            override fun onOK(returnValue: String?) = onCreateShortcut(returnValue)
+            override fun onOK(returnValue: String?) = onCreateShortcut(
+                returnValue,
+                scriptEngineHandler.currentFileUri
+            )
         }
         dialog.show(activity, layoutInflater)
     }
@@ -340,6 +346,7 @@ class ConsoleFragment : Fragment(),
         menuHandler.showOptionItem(R.id.action_clear_console)
         menuHandler.showOptionItem(R.id.action_stop_engine)
         menuHandler.showOptionItem(R.id.action_reset_engine)
+        menuHandler.showOptionItem(R.id.action_create_shortcut)
         txtInput.isEnabled = false
         btRun.isEnabled = false
         determineHistoryButtonAndOptionState()
@@ -374,8 +381,11 @@ class ConsoleFragment : Fragment(),
         menuHandler.showOptionItem(R.id.action_clear_console)
     }
 
-    private fun onCreateShortcut(returnValue: String?) {
-        // TODO: Use returnValue.
+    private fun onCreateShortcut(shortcutName: String?, uri: Uri?) {
+        if (shortcutName == null || uri == null) {
+            return
+        }
+        shortcutViewModel.addShortcut(shortcutName, uri)
         menuHandler.navigateTo(R.id.nav_shortcut)
         // TODO: Hide the menu option.
     }

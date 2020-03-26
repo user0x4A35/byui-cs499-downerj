@@ -10,6 +10,7 @@ import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavController
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
@@ -21,8 +22,9 @@ import com.google.gson.Gson
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEngine
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEngineHandler
 import io.github.ascenderx.mobilescript.models.scripting.ScriptEventListener
-import io.github.ascenderx.mobilescript.ui.menu.MenuEventListener
-import io.github.ascenderx.mobilescript.ui.menu.MenuHandler
+import io.github.ascenderx.mobilescript.views.ui.menu.MenuEventListener
+import io.github.ascenderx.mobilescript.views.ui.menu.MenuHandler
+import io.github.ascenderx.mobilescript.views.ui.shortcuts.ShortcutViewModel
 
 class MainActivity : AppCompatActivity(),
     ScriptEngineHandler,
@@ -48,6 +50,8 @@ class MainActivity : AppCompatActivity(),
         get() = engine?.commandHistory ?: listOf()
     override val isEngineBusy: Boolean
         get() = engine!!.isBusy
+    override val currentFileUri: Uri?
+        get() = engine?.currentFileUri
     private lateinit var gson: Gson
     override val shortcuts: MutableMap<String, Uri> = mutableMapOf()
 
@@ -84,9 +88,6 @@ class MainActivity : AppCompatActivity(),
         val drawerLayout: DrawerLayout = findViewById(R.id.drawer_layout)
         navView = findViewById(R.id.nav_view)
         val navController: NavController = findNavController(R.id.nav_host_fragment)
-        val navMenu: Menu = navView.menu
-        val itemConsole: MenuItem? = navMenu.findItem(R.id.nav_view_console)
-        val itemShortcuts: MenuItem? = navMenu.findItem(R.id.nav_goto_shortcuts)
 
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.
@@ -101,14 +102,10 @@ class MainActivity : AppCompatActivity(),
                     showScriptOpenDialog()
                 }
                 R.id.nav_view_console -> {
-                    navController.navigate(R.id.nav_console)
-                    itemConsole?.isVisible = false
-                    itemShortcuts?.isVisible = true
+                    navigateTo(R.id.nav_console)
                 }
                 R.id.nav_goto_shortcuts -> {
-                    navController.navigate(R.id.nav_shortcut)
-                    itemConsole?.isVisible = true
-                    itemShortcuts?.isVisible = false
+                    navigateTo(R.id.nav_shortcut)
                 }
             }
             drawerLayout.closeDrawers()
@@ -116,8 +113,7 @@ class MainActivity : AppCompatActivity(),
         }
         // Initializing in the console, so hide its menu item and reveal the other top-level
         // destination items.
-        itemConsole?.isVisible = false
-        itemShortcuts?.isVisible = true
+        onNavigate(R.id.nav_console)
     }
 
     override fun onDestroy() {
@@ -180,7 +176,24 @@ class MainActivity : AppCompatActivity(),
         )
     }
 
-    private fun restartScriptEngine(fileUri: Uri?) {
+    private fun onNavigate(destination: Int) {
+        val navMenu: Menu = navView.menu
+        val itemConsole: MenuItem? = navMenu.findItem(R.id.nav_view_console)
+        val itemShortcuts: MenuItem? = navMenu.findItem(R.id.nav_goto_shortcuts)
+
+        when (destination) {
+            R.id.nav_console -> {
+                itemConsole?.isVisible = false
+                itemShortcuts?.isVisible = true
+            }
+            R.id.nav_shortcut -> {
+                itemConsole?.isVisible = true
+                itemShortcuts?.isVisible = false
+            }
+        }
+    }
+
+    override fun restartScriptEngine(fileUri: Uri?) {
         engine?.kill()
         engine = ScriptEngine(object : Handler(Looper.getMainLooper()) {
             override fun handleMessage(msg: Message) {
@@ -194,10 +207,6 @@ class MainActivity : AppCompatActivity(),
         engine?.start()
     }
 
-    override fun restartScriptEngine() {
-        restartScriptEngine(null)
-    }
-
     override fun postData(data: String): Boolean {
         return engine!!.postData(data)
     }
@@ -206,16 +215,8 @@ class MainActivity : AppCompatActivity(),
         scriptListener = listener
     }
 
-    override fun detachScriptEventListener() {
-        scriptListener = null
-    }
-
     override fun attachMenuEventListener(listener: MenuEventListener) {
         menuListener = listener
-    }
-
-    override fun detachMenuEventListener() {
-        menuListener = null
     }
 
     override fun clearCommandHistory() {
@@ -239,5 +240,6 @@ class MainActivity : AppCompatActivity(),
     override fun navigateTo(destination: Int) {
         val navController: NavController = findNavController(R.id.nav_host_fragment)
         navController.navigate(destination)
+        onNavigate(destination)
     }
 }

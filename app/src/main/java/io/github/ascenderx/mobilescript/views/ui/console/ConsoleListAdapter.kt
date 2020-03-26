@@ -1,11 +1,10 @@
-package io.github.ascenderx.mobilescript.ui.console
+package io.github.ascenderx.mobilescript.views.ui.console
 
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.BaseAdapter
 import android.widget.TextView
-import androidx.lifecycle.MutableLiveData
 import io.github.ascenderx.mobilescript.R
 
 // See: http://android.amberfog.com/?p=296.

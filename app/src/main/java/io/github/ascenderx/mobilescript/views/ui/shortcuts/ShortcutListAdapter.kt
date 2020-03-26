@@ -1,4 +1,4 @@
-package io.github.ascenderx.mobilescript.ui.shortcuts
+package io.github.ascenderx.mobilescript.views.ui.shortcuts
 
 import android.net.Uri
 import android.view.LayoutInflater

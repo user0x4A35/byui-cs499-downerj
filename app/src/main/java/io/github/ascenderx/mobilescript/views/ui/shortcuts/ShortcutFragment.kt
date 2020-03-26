@@ -1,8 +1,6 @@
-package io.github.ascenderx.mobilescript.ui.shortcuts
+package io.github.ascenderx.mobilescript.views.ui.shortcuts
 
 import android.content.Context
-import android.content.SharedPreferences
-import android.net.Uri
 import android.os.Bundle
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater

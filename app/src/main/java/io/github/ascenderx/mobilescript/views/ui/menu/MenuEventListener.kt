@@ -1,4 +1,4 @@
-package io.github.ascenderx.mobilescript.ui.menu
+package io.github.ascenderx.mobilescript.views.ui.menu
 
 interface MenuEventListener {
     fun onOptionItemEvent(id: Int)

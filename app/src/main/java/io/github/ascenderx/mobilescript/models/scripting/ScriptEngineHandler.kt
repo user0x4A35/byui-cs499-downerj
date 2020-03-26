@@ -6,10 +6,10 @@ interface ScriptEngineHandler {
     val commandHistory: List<String>
     val isEngineBusy: Boolean
     val shortcuts: MutableMap<String, Uri>
+    val currentFileUri: Uri?
     fun attachScriptEventListener(listener: ScriptEventListener)
-    fun detachScriptEventListener()
     fun postData(data: String): Boolean
-    fun restartScriptEngine()
+    fun restartScriptEngine(fileUri: Uri? = null)
     fun clearCommandHistory()
     fun interrupt()
 }
