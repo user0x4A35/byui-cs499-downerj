@@ -234,16 +234,17 @@ class ConsoleFragment : Fragment(),
     }
 
     private fun determineHistoryButtonAndOptionState() {
-        val shouldEnable: Boolean = scriptEngineHandler.commandHistory.isNotEmpty() &&
+        val isEmpty: Boolean = scriptEngineHandler.commandHistory.isEmpty()
+        if (isEmpty) {
+            menuHandler.hideOptionItem(R.id.action_clear_history)
+        } else {
+            menuHandler.showOptionItem(R.id.action_clear_history)
+        }
+
+        val shouldEnable: Boolean = !isEmpty &&
                 currentHistoryIndex >= 0 &&
                 !scriptEngineHandler.isEngineBusy
-        if (shouldEnable) {
-            btHistory.isEnabled = true
-            menuHandler.showOptionItem(R.id.action_clear_history)
-        } else {
-            btHistory.isEnabled = false
-            menuHandler.hideOptionItem(R.id.action_clear_history)
-        }
+        btHistory.isEnabled = shouldEnable
     }
 
     private fun setInputMode(mode: Int) {
